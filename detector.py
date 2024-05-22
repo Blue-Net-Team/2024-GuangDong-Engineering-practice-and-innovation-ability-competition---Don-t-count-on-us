@@ -114,7 +114,7 @@ class ColorDetector(object):
             radius = int(radius)
             if (self.minarea > radius*radius or radius*radius > self.maxarea):
                 continue
-            if radius < 10:
+            if radius < 10:     # 排除小圆
                 continue
             cv2.circle(img, center, radius, (0, 255, 0), 2)
             lst.append((center, radius))
@@ -155,3 +155,40 @@ class QRDetector(object):
         del self.detector
         pass
 
+
+class LineDetector(object):
+    """直线识别器"""
+    def __init__(self) -> None:
+        pass
+
+    def get_angle(self, img:cv2.typing.MatLike) -> float|None:
+        """获取直线的角度"""
+        # 转换为灰度图
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # 使用Canny算法进行边缘检测
+        edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+        # 使用霍夫变换检测直线
+        lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
+
+        if lines is not None:
+            for rho, theta in lines[0]:
+                # 计算直线的斜率
+                a = np.cos(theta)
+                b = np.sin(theta)
+                # 计算直线的角度（以度为单位）
+                angle = np.arctan2(b, a) * 180 / np.pi
+                return angle
+
+        return None
+
+    def draw_and_get_angle_difference(self, img:cv2.typing.MatLike, p1, p2) -> float|None:
+        """在图像上绘制直线，并获取两条直线之间的角度"""
+        # 在图像上绘制直线
+        cv2.line(img, p1, p2, (0, 255, 0), 2)
+        # 获取图像中的直线的角度
+        angle1 = self.get_angle(img)
+        # 计算绘制的直线的角度
+        dx, dy = p2[0] - p1[0], p2[1] - p1[1]
+        angle2 = np.arctan2(dy, dx) * 180 / np.pi
+        # 返回两条直线之间的角度
+        return abs(angle1 - angle2) if angle1 is not None else None
