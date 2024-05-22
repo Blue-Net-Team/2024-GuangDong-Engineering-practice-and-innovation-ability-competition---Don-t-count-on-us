@@ -161,7 +161,7 @@ class Solution:
                 break
 
         while True:
-            while ser.read() != b'\n':      # 电控发送start信号，开始第一次识别颜色
+            if ser.read() != b'\n':      # 电控发送start信号，开始第一次识别颜色
                 for i in qr_msg:
                     # region 设置颜色阈值
                     color.low_h = thresholds[i][0][0]
