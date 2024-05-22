@@ -67,10 +67,10 @@ class ColorDetector(object):
         self.maxarea = maxarea
     # endregion
 
-    def detect(self, img:cv2.typing.MatLike):
-        """颜色识别
+    def filter(self, img:cv2.typing.MatLike):
+        """颜色识别 二值化滤波
         * img: 传入的图像数据
-        返回值：二值化过滤后的图像数据"""
+        * 返回值：二值化过滤后的图像数据"""
         _shape = img.shape
         try:
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)				# 将BGR图像转换成HSV图像
@@ -191,4 +191,10 @@ class LineDetector(object):
         dx, dy = p2[0] - p1[0], p2[1] - p1[1]
         angle2 = np.arctan2(dy, dx) * 180 / np.pi
         # 返回两条直线之间的角度
-        return abs(angle1 - angle2) if angle1 is not None else None
+        return angle1 - angle2 if angle1 is not None else None
+    
+
+if __name__ == '__main__':
+    #TODO: 测试代码
+
+    pass
