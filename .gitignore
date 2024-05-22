@@ -144,4 +144,4 @@ cython_debug/
 *.jpg
 *.png
 *.jpeg
-*.txt
+*COCO
