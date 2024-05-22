@@ -27,6 +27,7 @@ class CNN(nn.Module):
 
         # 全连接层
         self.fc = nn.Sequential(
+            nn.Flatten(),
             nn.Linear(128*32*32, 1024),
             nn.ReLU(),
             nn.Linear(1024, 10),
@@ -46,6 +47,11 @@ class CNN(nn.Module):
         # 1号节点
         img_tensor = self.node1(img_tensor)
         # 全连接层
-        img_tensor = img_tensor.view(-1, 128*32*32)     # 将图片展平
         img_tensor = self.fc(img_tensor)
         return img_tensor
+    
+
+if __name__ == "__main__":
+    model = CNN()
+    img = cv2.imread("imgtest.jpg")
+    print(model(img))
