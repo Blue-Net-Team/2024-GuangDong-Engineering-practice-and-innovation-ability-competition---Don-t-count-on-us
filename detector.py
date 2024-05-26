@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import serial
 
 
 class ColorDetector(object):
@@ -135,38 +136,22 @@ class ColorDetector(object):
         pass
 
 
-class QRDetector(object):
-    """二维码识别器"""
-    def __init__(self) -> None:
-        """初始化"""
-        self.detector = cv2.QRCodeDetector()
-        pass
-
-    def __call__(self, img:cv2.typing.MatLike) -> str:
-        """使用call方法调用识别器
-        * img: 传入的图像数据
-        返回值：二维码的数据"""
-        # 识别二维码
-        data, _, _ = self.detector.detectAndDecode(img)
-        return data
-
-    def __del__(self):
-        """析构函数"""
-        del self.detector
-        pass
-
-
 class LineDetector(object):
     """直线识别器"""
     def __init__(self) -> None:
         pass
 
-    def get_angle(self, img:cv2.typing.MatLike) -> float|None:
+    def get_angle(self, _img:cv2.typing.MatLike) -> float|None:
         """获取直线的角度"""
         # 转换为灰度图
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(_img, cv2.COLOR_BGR2GRAY)
         # 使用Canny算法进行边缘检测
         edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+        # 闭运算
+        edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (5, 5))        # type:ignore
+        # 膨胀
+        edges = cv2.dilate(edges, (5, 5))                               # type:ignore
+        cv2.imshow('edges', edges)
         # 使用霍夫变换检测直线
         lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
 
@@ -177,24 +162,50 @@ class LineDetector(object):
                 b = np.sin(theta)
                 # 计算直线的角度（以度为单位）
                 angle = np.arctan2(b, a) * 180 / np.pi
+                # 将识别的线画出来
+                # cv2.line(_img, (0, 0), (int(a * 1000), int(b * 1000)), (0, 0, 255), 2)
+                cv2.imshow('img', _img)
                 return angle
 
         return None
-
-    def draw_and_get_angle_difference(self, img:cv2.typing.MatLike, p1, p2) -> float|None:
-        """在图像上绘制直线，并获取两条直线之间的角度"""
-        # 在图像上绘制直线
-        cv2.line(img, p1, p2, (0, 255, 0), 2)
-        # 获取图像中的直线的角度
-        angle1 = self.get_angle(img)
-        # 计算绘制的直线的角度
-        dx, dy = p2[0] - p1[0], p2[1] - p1[1]
-        angle2 = np.arctan2(dy, dx) * 180 / np.pi
-        # 返回两条直线之间的角度
-        return angle1 - angle2 if angle1 is not None else None
     
+    
+class QRdetector(object):
+    def __init__(self) -> None:
+        # TODO: 补充二维码识别器
+        pass
+
+    def __call__(self) -> list|None:
+        # TODO: 补充二维码识别的部分，识别到结果返回有序列表，代表物块运输的顺序
+        pass
+
 
 if __name__ == '__main__':
     #TODO: 测试代码
+    line = LineDetector()
+    cap = cv2.VideoCapture(0)
 
+    # region 直线识别第一测试
+    while True:
+        img = cap.read()[1]
+        angle = line.get_angle(img)
+        if angle is not None:
+            print(angle)
+        cv2.imshow('img', img)
+        if cv2.waitKey(1) == 27:
+            break
+    # endregion
+        
+    # region 直线识别第二测试
+    # p1 = (0, 400)
+    # p2 = (640, 400)
+    # while True:
+    #     img = cap.read()[1]
+    #     angle = line.draw_and_get_angle_difference(img, p1, p2)
+    #     if angle is not None:
+    #         print(angle)
+    #     cv2.imshow('img', img)
+    #     if cv2.waitKey(1) == 27:
+    #         break
+    # endregion
     pass
