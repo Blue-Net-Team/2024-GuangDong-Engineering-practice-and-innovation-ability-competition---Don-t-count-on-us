@@ -132,7 +132,8 @@ class Solution:
                             # 计算重叠面积
                             eara = circle_intersection_area(center1[0], center1[1], radius1, cycle[0][0], cycle[0][1], cycle[1])
                             if eara/eara > 0.8:     # 重叠面积大于85%
-                                ser.send(1)     # 发送信号，做出抓取动作
+                                # TODO:拉高电平
+                                
                                 break
 
 
