@@ -98,14 +98,16 @@ class Solution:
         while True:
             if ser.read() != b'\n':      # 电控发送start信号，开始第一次识别颜色
                 for i in qr_msg:
+                    # i:“1”为红色，“2”为绿色，“3”为蓝色
+                    index = i-1
                     # region 设置颜色阈值
-                    color.low_h = thresholds[i][0][0]
-                    color.low_s = thresholds[i][0][1]
-                    color.low_v = thresholds[i][0][2]
+                    color.low_h = thresholds[index][0][0]
+                    color.low_s = thresholds[index][0][1]
+                    color.low_v = thresholds[index][0][2]
 
-                    color.high_h = thresholds[i][1][0]
-                    color.high_s = thresholds[i][1][1]
-                    color.high_v = thresholds[i][1][2]
+                    color.high_h = thresholds[index][1][0]
+                    color.high_s = thresholds[index][1][1]
+                    color.high_v = thresholds[index][1][2]
 
                     # endregion
 
