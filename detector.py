@@ -177,12 +177,12 @@ class QRdetector(serial.Serial):
         super().__init__('/dev/ttyAMA0', 9600, timeout=1)
         pass
 
-    def qr_detect(self) -> list|None:
+    def qr_detect(self) -> list[str]|None:
         ori = self.read(8)
         if ori == b'':
             return None
         msg = ori[:-1].decode()
-        lst = list(map(int, msg.split('+')))
+        lst = list(map(str, msg.split('+')))
         return lst
 
 
