@@ -172,14 +172,18 @@ class LineDetector(object):
         return None
     
     
-class QRdetector(object):
+class QRdetector(serial.Serial):
     def __init__(self) -> None:
-        # TODO: 补充二维码识别器
+        super().__init__('/dev/ttyAMA0', 9600, timeout=1)
         pass
 
-    def __call__(self) -> list|None:
-        # TODO: 补充二维码识别的部分，识别到结果返回有序列表，代表物块运输的顺序
-        pass
+    def qr_detect(self) -> list|None:
+        ori = self.read(8)
+        if ori == b'':
+            return None
+        msg = ori[:-1].decode()
+        lst = list(map(int, msg.split('+')))
+        return lst
 
 
 if __name__ == '__main__':
@@ -188,14 +192,14 @@ if __name__ == '__main__':
     cap = cv2.VideoCapture(0)
 
     # region 直线识别第一测试
-    while True:
-        img = cap.read()[1]
-        angle = line.get_angle(img)
-        if angle is not None:
-            print(angle)
-        cv2.imshow('img', img)
-        if cv2.waitKey(1) == 27:
-            break
+    # while True:
+    #     img = cap.read()[1]
+    #     angle = line.get_angle(img)
+    #     if angle is not None:
+    #         print(angle)
+    #     cv2.imshow('img', img)
+    #     if cv2.waitKey(1) == 27:
+    #         break
     # endregion
         
     # region 直线识别第二测试
