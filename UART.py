@@ -1,10 +1,12 @@
 import serial
 import struct
 
+from detector import QRdetector
 
-class UART(serial.Serial):
+
+class UART(QRdetector):
     def __init__(self):
-        super().__init__("/dev/ttyAMA0", 9600)
+        super().__init__()
 
     @staticmethod
     def pack(func):
