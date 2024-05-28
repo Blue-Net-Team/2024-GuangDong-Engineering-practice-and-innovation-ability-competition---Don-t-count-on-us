@@ -1,8 +1,4 @@
 r"""
-发送信号1：抓取
-发送信号2：向左偏
-发送信号3：向右偏
-
 *********************************************
                    _ooOoo_
                   o8888888o
@@ -27,58 +23,67 @@ r"""
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 """
 import math
+import time
 import numpy as np
 from UART import UART
 import detector
 import cv2
 import threading
 from img_trans import VideoStreaming
+import RPi.GPIO as GPIO
     
+start_pin = 18      # 启动电平引脚
+sign_pin = 17       # 信号引脚
+c_pin = 27          # 校准引脚
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(start_pin, GPIO.IN)
+GPIO.setup(sign_pin, GPIO.OUT)
+GPIO.setup(c_pin, GPIO.IN)
 
 #TODO: 完善阈值表, 0红 1绿 2蓝
-thresholds = {
-            #[low_h, low_s, low_v], [high_h, high_s, high_v]
-    'red': ([0, 0, 0], [0, 0, 0]),
-    'green': ([0, 0, 0], [0, 0, 0]),
-    'blue': ([0, 0, 0], [0, 0, 0]),
-}
+thresholds = [
+    #[low_h, low_s, low_v], [high_h, high_s, high_v]
+    ([0, 0, 0], [0, 0, 0]),
+    ([0, 0, 0], [0, 0, 0]),
+    ([0, 0, 0], [0, 0, 0]),
+] 
 
-# 打开摄像头
-cap = cv2.VideoCapture(0)
-
-# 创建识别器对象
-qr = ()
-color = detector.ColorDetector()
-line = detector.LineDetector()
-
-# 颜色识别器面积初始化
-color.minarea = 0
-color.maxarea = 100000
-
-# 创建串口对象
-ser = UART()
-
-
-def correcttion():
-    """校准小车角度"""
-    while True:
-        _img = cap.read()[1]
-        angle = line.get_angle(_img)
-        if angle is not None:
-            if abs(angle) > 3:
-                #TODO:测试什么情况角度小于90，然后发送正确的信号
-                if angle < 90:
-                    ser.send(2)
-                elif angle > 90:
-                    ser.send(3)
-
-# 创建校准线程
-t = threading.Thread(target=correcttion)
-t.start()
 
 class Solution:
     def __init__(self):
+        # 打开读取图像线程
+        img = threading.Thread(target=self.get_img)
+        img.start()
+
+        # 创建识别器对象
+        self.color = detector.ColorDetector()
+        self.line = detector.LineDetector()
+
+        # 颜色识别器面积初始化
+        self.color.minarea = 0
+        self.color.maxarea = 100000
+
+        # 创建串口对象，self.ser继承了二维码识别的功能
+        self.ser = UART()
+        self.cap = cv2.VideoCapture(0)
+
+        # TODO:测试夹爪的圆心坐标,半径
+        self.circle_point = (100, 100)
+        self.circle_r = 50
         pass
+
+
+    def correcttion(self):
+        """校准小车角度"""
+        while GPIO.input(c_pin):
+            _img = self.cap.read()[1]
+            angle = self.line.get_angle(_img)
+            if angle is not None:
+                if abs(angle) > 3:
+                    self.ser.send(int(angle))
+
+
 
     def streaming(self):
         self.stream = VideoStreaming('10.0.0.3', 8000)
@@ -89,52 +94,74 @@ class Solution:
                 self.stream.send(self.img)
 
 
+    def get_img(self):
+        while True:
+            ret, self.img = self.cap.read()
+            cv2.circle(self.img, self.circle_point, self.circle_r, (0, 0, 255), 2)
+            if ret:
+                break
+
+
     def __call__(self):
+        # 创建校准线程
+        c = threading.Thread(target=self.correcttion)
+        c.start()
+
         # 打开图传线程
         trans = threading.Thread(target=self.streaming)
         trans.start()
-        # TODO: 等待新的二维码模块到了之后补充二维码识别逻辑
 
+        # 二维码识别
         while True:
-            if ser.read() != b'\n':      # 电控发送start信号，开始第一次识别颜色
-                for i in qr_msg:
-                    # i:“1”为红色，“2”为绿色，“3”为蓝色
-                    index = i-1
-                    # region 设置颜色阈值
-                    color.low_h = thresholds[index][0][0]
-                    color.low_s = thresholds[index][0][1]
-                    color.low_v = thresholds[index][0][2]
+            qr_lst = self.ser.qr_detect()
+            if qr_lst is not None:
+                break
 
-                    color.high_h = thresholds[index][1][0]
-                    color.high_s = thresholds[index][1][1]
-                    color.high_v = thresholds[index][1][2]
-
+        # region 第一次到原料区拿取物料
+        """定位色环 <---> 做出动作"""
+        msg1 = qr_lst[0]
+        for index in msg1:
+            while True:
+                if GPIO.input(start_pin) :      # 检测到启动信号
+                    # region 阈值表初始化
+                    self.color.low_h, self.color.low_s, self.color.low_v = thresholds[int(index)-1][0]
+                    self.color.high_h, self.color.high_s, self.color.high_v = thresholds[int(index)-1][1]
                     # endregion
 
-                    while True:
-                        # 读取摄像头数据
-                        ret, self.img = cap.read()
+                    mask = self.color.filter(self.img)
+                    res, p = self.color.draw_cyclic(mask)
 
-                        #TODO: 在图像中找到物料应该在的正确位置，用圆圈圈出来
-                        center1, radius1  = (0, 0), 0
-                        eara0 = radius1 ** 2 * math.pi
-                        cv2.circle(self.img, center1, radius1, (255, 255, 0), 1)
+                    overlap_area = circle_intersection_area(self.circle_point[0], self.circle_point[1], self.circle_r,
+                                                            p[0][0], p[0][1], p[1])
+                    area = np.pi * self.circle_r ** 2
 
-                        # 二值化滤波
-                        img_color = color.filter(self.img)
+                    if overlap_area/area > 0.95:
+                        # 重叠面积大于95%，拉高17引脚电平0.5s
+                        GPIO.output(sign_pin, 1)
+                        time.sleep(0.5)
+                        GPIO.output(sign_pin, 0)
+                        break
+                else:continue
+        # endregion
+                
+        # region 将物料放到粗加工区 无序
+        """
+        定位色环 -> 停车信号 
+            ^           |
+            |           v
+          运动   <-  做出动作
+        """
+        # TODO:添加代码
+        # endregion
+                
+        # region 将物料从粗加工取出 有序
+        # TODO:添加代码
+        # endregion
+                
+        # region 将物料放到暂存区 有序
+        # TODO:添加代码
+        # endregion
 
-                        img_color, cycle = color.draw_cyclic(img_color)
-
-                        # 在原图上画出识别到的颜色
-                        cv2.circle(self.img, cycle[0], cycle[1], (0, 0, 255), 2)
-
-                        if cycle:       # 识别到颜色
-                            # 计算重叠面积
-                            eara = circle_intersection_area(center1[0], center1[1], radius1, cycle[0][0], cycle[0][1], cycle[1])
-                            if eara/eara > 0.8:     # 重叠面积大于85%
-                                # TODO:拉高电平
-                                
-                                break
 
 
 def circle_intersection_area(x0, y0, r0, x1, y1, r1):
