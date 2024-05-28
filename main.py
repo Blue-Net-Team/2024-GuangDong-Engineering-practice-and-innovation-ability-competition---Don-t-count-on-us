@@ -81,7 +81,7 @@ class Solution:
         pass
 
     def streaming(self):
-        self.stream = VideoStreaming('10.0.0.2', 8000)
+        self.stream = VideoStreaming('10.0.0.3', 8000)
         self.stream.connecting()
         self.stream.start()
         while True:
