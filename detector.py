@@ -68,7 +68,7 @@ class ColorDetector(object):
         self.maxarea = maxarea
     # endregion
 
-    def filter(self, img:cv2.typing.MatLike):
+    def filter(self, img:cv2.typing.MatLike, _iterations:int=1):
         """颜色识别 二值化滤波
         * img: 传入的图像数据
         * 返回值：二值化过滤后的图像数据"""
@@ -83,9 +83,11 @@ class ColorDetector(object):
 
         mask = cv2.inRange(hsv, low, high)						# 通过阈值过滤图像，将在阈值范围内的像素点设置为255，不在阈值范围内的像素点设置为0
         kernel = np.ones((5, 5), np.uint8)						# 创建一个5*5的矩阵，矩阵元素全为1
-        opencal = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)	# 开运算，先腐蚀后膨胀
-        # 对opencal进行腐蚀操作，去除噪声
-        res = cv2.erode(opencal, kernel, iterations=1)
+        opencal = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)	# 对mask进行闭运算，填充小洞
+        # 对opencal进行膨胀
+        res = cv2.dilate(opencal, kernel, iterations=_iterations)
+        # 对res进行腐蚀
+        res = cv2.erode(res, kernel, iterations=_iterations)
         return res
 
     def draw_rectangle(self, img:cv2.typing.MatLike): 
