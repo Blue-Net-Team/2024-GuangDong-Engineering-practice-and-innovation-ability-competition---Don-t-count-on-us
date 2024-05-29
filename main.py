@@ -117,50 +117,92 @@ class Solution:
             if qr_lst is not None:
                 break
 
-        # region 第一次到原料区拿取物料
-        """定位色环 <---> 做出动作"""
-        msg1 = qr_lst[0]
-        for index in msg1:
-            while True:
-                if GPIO.input(start_pin) :      # 检测到启动信号
-                    # region 阈值表初始化
-                    self.color.low_h, self.color.low_s, self.color.low_v = thresholds[int(index)-1][0]
-                    self.color.high_h, self.color.high_s, self.color.high_v = thresholds[int(index)-1][1]
-                    # endregion
+        for msg in qr_lst:
+            # region 第一次到原料区拿取物料
+            """定位色环 <---> 做出动作"""
+            for index in msg:
+                while True:
+                    if GPIO.input(start_pin) :      # 检测到启动信号
+                        # region 阈值表初始化
+                        self.color.low_h, self.color.low_s, self.color.low_v = thresholds[int(index)-1][0]
+                        self.color.high_h, self.color.high_s, self.color.high_v = thresholds[int(index)-1][1]
+                        # endregion
 
-                    mask = self.color.filter(self.img)
-                    res, p = self.color.draw_cyclic(mask)
+                        mask = self.color.filter(self.img)
+                        res, p = self.color.draw_cyclic(mask)
 
-                    overlap_area = circle_intersection_area(self.circle_point[0], self.circle_point[1], self.circle_r,
-                                                            p[0][0], p[0][1], p[1])
-                    area = np.pi * self.circle_r ** 2
+                        overlap_area = circle_intersection_area(self.circle_point[0], self.circle_point[1], self.circle_r,
+                                                                p[0][0], p[0][1], p[1])
+                        area = np.pi * self.circle_r ** 2
 
-                    if overlap_area/area > 0.95:
-                        # 重叠面积大于95%，拉高17引脚电平0.5s
-                        GPIO.output(sign_pin, 1)
-                        time.sleep(0.5)
-                        GPIO.output(sign_pin, 0)
-                        break
-                else:continue
-        # endregion
-                
-        # region 将物料放到粗加工区 无序
-        """
-        定位色环 -> 停车信号 
-            ^           |
-            |           v
-          运动   <-  做出动作
-        """
-        # TODO:添加代码
-        # endregion
-                
-        # region 将物料从粗加工取出 有序
-        # TODO:添加代码
-        # endregion
-                
-        # region 将物料放到暂存区 有序
-        # TODO:添加代码
-        # endregion
+                        if overlap_area/area > 0.95:
+                            # 重叠面积大于95%，拉高17引脚电平0.5s
+                            GPIO.output(sign_pin, 1)
+                            time.sleep(0.5)
+                            GPIO.output(sign_pin, 0)
+                            break
+                    else:continue
+            # endregion
+                    
+            # region 将物料放到粗加工区 无序
+            """
+            定位色环 -> 停车信号 
+                ^           |
+                |           v
+            运动   <-  做出动作
+            """
+            for i in range(3):
+                while True:
+                    if GPIO.input(start_pin) :      # 检测到启动信号
+                        # region 阈值表初始化
+                        self.color.low_h, self.color.low_s, self.color.low_v = thresholds[i][0]
+                        self.color.high_h, self.color.high_s, self.color.high_v = thresholds[i][1]
+                        # endregion
+
+                        mask = self.color.filter(self.img)
+                        res, p = self.color.draw_cyclic(mask)
+
+                        overlap_area = circle_intersection_area(self.circle_point[0], self.circle_point[1], self.circle_r,
+                                                                p[0][0], p[0][1], p[1])
+                        area = np.pi * self.circle_r ** 2
+
+                        if overlap_area/area > 0.95:
+                            # 重叠面积大于95%，拉高17引脚电平0.5s
+                            GPIO.output(sign_pin, 1)
+                            time.sleep(0.5)
+                            GPIO.output(sign_pin, 0)
+                            break
+                    else:continue
+            # endregion
+                    
+            # region 将物料从粗加工取出 有序
+            for index in msg:
+                while True:
+                    if GPIO.input(start_pin) :      # 检测到启动信号
+                        # region 阈值表初始化
+                        self.color.low_h, self.color.low_s, self.color.low_v = thresholds[int(index)-1][0]
+                        self.color.high_h, self.color.high_s, self.color.high_v = thresholds[int(index)-1][1]
+                        # endregion
+
+                        mask = self.color.filter(self.img)
+                        res, p = self.color.draw_cyclic(mask)
+
+                        overlap_area = circle_intersection_area(self.circle_point[0], self.circle_point[1], self.circle_r,
+                                                                p[0][0], p[0][1], p[1])
+                        area = np.pi * self.circle_r ** 2
+
+                        if overlap_area/area > 0.95:
+                            # 重叠面积大于95%，拉高17引脚电平0.5s
+                            GPIO.output(sign_pin, 1)
+                            time.sleep(0.5)
+                            GPIO.output(sign_pin, 0)
+                            break
+                    else:continue
+            # endregion
+                    
+            # region 将物料放到暂存区 有序
+            # TODO:添加代码
+            # endregion
 
 
 
@@ -185,4 +227,4 @@ def circle_intersection_area(x0, y0, r0, x1, y1, r1):
 
 
 if __name__ == '__main__':
-    Solution()
+    Solution()()
