@@ -34,7 +34,7 @@ import RPi.GPIO as GPIO
     
 start_pin = 18      # 启动电平引脚
 sign_pin = 17       # 信号引脚
-c_pin = 27          # 校准引脚
+c_pin = 27          # 角度校准引脚
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(start_pin, GPIO.IN)
@@ -47,14 +47,23 @@ thresholds = [
     ([0, 0, 0], [0, 0, 0]),
     ([0, 0, 0], [0, 0, 0]),
     ([0, 0, 0], [0, 0, 0]),
-] 
+]
+MSG_SEND_dict = {
+    0:'R',
+    1:'G',
+    2:'B'
+}
 
 
 class Solution:
     def __init__(self):
+        # TODO:测试夹爪的圆心坐标,半径
+        self.circle_point = (100, 100)
+        self.circle_r = 50
+        self.circle_area = math.pi * self.circle_r ** 2
+
         # 打开读取图像线程
-        img = threading.Thread(target=self.get_img)
-        img.start()
+        threading.Thread(target=self.get_img).start()
 
         # 创建识别器对象
         self.color = detector.ColorDetector()
@@ -68,21 +77,20 @@ class Solution:
         self.ser = UART()
         self.cap = cv2.VideoCapture(0)
 
-        # TODO:测试夹爪的圆心坐标,半径
-        self.circle_point = (100, 100)
-        self.circle_r = 50
+        self.mask = None
+        self.sending_start = False
         pass
 
 
     def correcttion(self):
         """校准小车角度"""
-        while GPIO.input(c_pin):
-            _img = self.cap.read()[1]
-            angle = self.line.get_angle(_img)
-            if angle is not None:
-                if abs(angle) > 3:
-                    self.ser.send(int(angle))
-
+        while True:
+            if GPIO.input(c_pin):
+                _img = self.cap.read()[1]
+                angle = self.line.get_angle(_img)
+                if angle is not None:
+                    if abs(angle-90) > 2:
+                        self.ser.send(int(angle))
 
 
     def streaming(self):
@@ -102,6 +110,22 @@ class Solution:
                 break
 
 
+    def send_msg(self, msg:str|int|list):
+        """从串口发送信号"""
+        if isinstance(msg, str):
+            self.ser.write(msg)
+        elif isinstance(msg, int):
+            self.ser.send(msg)
+        elif isinstance(msg, tuple):
+            self.ser.send_arr(msg)
+
+    
+    def SENG(self, msg):
+        """发送信号"""
+        while self.sending_start:
+            self.send_msg(msg)
+
+
     def __call__(self):
         # 创建校准线程
         c = threading.Thread(target=self.correcttion)
@@ -116,92 +140,135 @@ class Solution:
             qr_lst = self.ser.qr_detect()
             if qr_lst is not None:
                 break
-
+        p = None
+        def UPDATE():
+            """更新"""
+            global last_p
+            while True:
+                last_p = p
+                time.sleep(0.5)
+        threading.Thread(target=UPDATE).start()
         for msg in qr_lst:
             # region 第一次到原料区拿取物料
-            """定位色环 <---> 做出动作"""
-            for index in msg:
+            """先停车，然后确定物料停止，再校准位置(持续发送x轴距离，直到重叠面积达到95%)
+            拉高17引脚电平，等待0.5秒，拉低17引脚电平，从而触发物料夹持"""
+            for i in msg:
+                # XXX: 可能有问题
+                p = None
                 while True:
-                    if GPIO.input(start_pin) :      # 检测到启动信号
-                        # region 阈值表初始化
-                        self.color.low_h, self.color.low_s, self.color.low_v = thresholds[int(index)-1][0]
-                        self.color.high_h, self.color.high_s, self.color.high_v = thresholds[int(index)-1][1]
-                        # endregion
+                    threshold = thresholds[int(i)]      # 获取阈值
+                    self.color.set_threshold(threshold)     # 设置阈值
+                    self.mask = self.color.filter(self.img)    # 过滤
+                    self.mask, p = self.color.draw_cyclic(self.mask)    # 画出色环
 
-                        mask = self.color.filter(self.img)
-                        res, p = self.color.draw_cyclic(mask)
+                    # region 判断是否停止
+                    if last_p is not None:
+                        change_p = last_p[0][0]-p[0][0], last_p[0][1]-p[0][1]
+                    else:
+                        change_p = p[0]
+                    
+                    change = change_p[0] ** 2 + change_p[1] ** 2
+                    change = change ** 0.5
 
-                        overlap_area = circle_intersection_area(self.circle_point[0], self.circle_point[1], self.circle_r,
-                                                                p[0][0], p[0][1], p[1])
-                        area = np.pi * self.circle_r ** 2
+                    if change < 5:      #TODO: 确定是不是5,物料半秒移动的距离
+                        break
+                    # endregion
 
-                        if overlap_area/area > 0.95:
-                            # 重叠面积大于95%，拉高17引脚电平0.5s
-                            GPIO.output(sign_pin, 1)
-                            time.sleep(0.5)
-                            GPIO.output(sign_pin, 0)
-                            break
-                    else:continue
+                # region 校准位置
+                defence_x = None
+                self.sending_start = True
+                threading.Thread(target=self.SENG, args=(defence_x,)).start()
+
+                while True:
+                    self.mask = self.color.filter(self.img)    # 过滤
+                    self.mask, p = self.color.draw_cyclic(self.mask)    # 画出色环
+                    defence_x = p[0][0]-self.circle_point[0]        # 计算色环与圆心的x轴距
+                    # 计算重叠面积
+                    area = circle_intersection_area(p[0][0], p[0][1], p[1], self.circle_point[0], self.circle_point[1], self.circle_r)
+
+                    if area/self.circle_area > 0.95:
+                        GPIO.output(sign_pin, 1)
+                        time.sleep(0.5)
+                        GPIO.output(sign_pin, 0)
+                        self.sending_start = False
+                        break
+                # endregion
+
             # endregion
                     
             # region 将物料放到粗加工区 无序
             """
-            定位色环 -> 停车信号 
-                ^           |
-                |           v
-            运动   <-  做出动作
+            定位色环   ->   停车信号 
+                ^              |
+                |              v
+             继续向前   <-  做出动作
+            定位红绿蓝色环，发出RGB信号到UART
             """
             for i in range(3):
+                threshold = thresholds[i]
+                self.color.set_threshold(threshold)
                 while True:
-                    if GPIO.input(start_pin) :      # 检测到启动信号
-                        # region 阈值表初始化
-                        self.color.low_h, self.color.low_s, self.color.low_v = thresholds[i][0]
-                        self.color.high_h, self.color.high_s, self.color.high_v = thresholds[i][1]
-                        # endregion
-
-                        mask = self.color.filter(self.img)
-                        res, p = self.color.draw_cyclic(mask)
-
-                        overlap_area = circle_intersection_area(self.circle_point[0], self.circle_point[1], self.circle_r,
-                                                                p[0][0], p[0][1], p[1])
-                        area = np.pi * self.circle_r ** 2
-
-                        if overlap_area/area > 0.95:
-                            # 重叠面积大于95%，拉高17引脚电平0.5s
-                            GPIO.output(sign_pin, 1)
-                            time.sleep(0.5)
-                            GPIO.output(sign_pin, 0)
-                            break
-                    else:continue
+                    self.mask = self.color.filter(self.img)
+                    self.mask, p = self.color.draw_cyclic(self.mask)
+                    
+                    # 计算重叠面积
+                    area = circle_intersection_area(p[0][0], p[0][1], p[1], self.circle_point[0], self.circle_point[1], self.circle_r)
+                    if area/self.circle_area > 0.95:
+                        self.send_msg(MSG_SEND_dict[i])
+                        break
             # endregion
                     
             # region 将物料从粗加工取出 有序
-            for index in msg:
+            for i in msg:
+                # TODO:讨论部分
+                """放完物料之后小车在区域尾部，电控读取了二维码的顺序信息后，
+                在此处是不是应该根据信息直接来到对应的颜色区域，然后我在进行调整，
+                因为颜色区域是红绿蓝顺序的。
+                
+                是不是应该拉高一个引脚电平（到了大概位置之后）然后我在开始调整呢？"""
+                # XXX: 未讨论而且可能有问题
+                # region 校准位置
+                defence_x = None
+                self.sending_start = True
+                threading.Thread(target=self.SENG, args=(defence_x,)).start()
+
                 while True:
-                    if GPIO.input(start_pin) :      # 检测到启动信号
-                        # region 阈值表初始化
-                        self.color.low_h, self.color.low_s, self.color.low_v = thresholds[int(index)-1][0]
-                        self.color.high_h, self.color.high_s, self.color.high_v = thresholds[int(index)-1][1]
-                        # endregion
+                    self.mask = self.color.filter(self.img)    # 过滤
+                    self.mask, p = self.color.draw_cyclic(self.mask)    # 画出色环
+                    defence_x = p[0][0]-self.circle_point[0]        # 计算色环与圆心的x轴距
+                    # 计算重叠面积
+                    area = circle_intersection_area(p[0][0], p[0][1], p[1], self.circle_point[0], self.circle_point[1], self.circle_r)
 
-                        mask = self.color.filter(self.img)
-                        res, p = self.color.draw_cyclic(mask)
-
-                        overlap_area = circle_intersection_area(self.circle_point[0], self.circle_point[1], self.circle_r,
-                                                                p[0][0], p[0][1], p[1])
-                        area = np.pi * self.circle_r ** 2
-
-                        if overlap_area/area > 0.95:
-                            # 重叠面积大于95%，拉高17引脚电平0.5s
-                            GPIO.output(sign_pin, 1)
-                            time.sleep(0.5)
-                            GPIO.output(sign_pin, 0)
-                            break
-                    else:continue
+                    if area/self.circle_area > 0.95:
+                        GPIO.output(sign_pin, 1)
+                        time.sleep(0.5)
+                        GPIO.output(sign_pin, 0)
+                        self.sending_start = False
+                        break
+                # endregion
             # endregion
                     
             # region 将物料放到暂存区 有序
-            # TODO:添加代码
+            # TODO:需要讨论,与上面相同
+            for i in msg:
+                defence_x = None
+                self.sending_start = True
+                threading.Thread(target=self.SENG, args=(defence_x,)).start()
+                
+                while True:
+                    if GPIO.input(start_pin):   # 启动引脚被拉高电平
+                        self.mask = self.color.filter(self.img)
+                        self.mask, p = self.color.draw_cyclic(self.mask)
+
+                        # 计算重叠面积
+                        area = circle_intersection_area(p[0][0], p[0][1], p[1], self.circle_point[0], self.circle_point[1], self.circle_r)
+
+                        if area/self.circle_area > 0.95:
+                            GPIO.output(sign_pin, 1)
+                            time.sleep(0.5)
+                            GPIO.output(sign_pin, 0)
+                            self.sending_start = False
+                            break
             # endregion
 
 
