@@ -23,6 +23,17 @@ class ColorDetector(object):
         self.maxarea = 100000 # 220800
         # endregion
 
+    def set_threshold(self, _threshold:tuple[list[int], list[int]]) -> None:
+        """设置颜色阈值
+        * _threshold: 传入的颜色阈值"""
+        self.low_h = _threshold[0][0]
+        self.low_s = _threshold[0][1]
+        self.low_v = _threshold[0][2]
+
+        self.high_h = _threshold[1][0]
+        self.high_s = _threshold[1][1]
+        self.high_v = _threshold[1][2]
+
     def __call__(self,id:int=0):
         """使用call方法调出trackbar
         * id: 识别器的id的id"""
@@ -192,14 +203,14 @@ if __name__ == '__main__':
     cap = cv2.VideoCapture(0)
 
     # region 直线识别第一测试
-    # while True:
-    #     img = cap.read()[1]
-    #     angle = line.get_angle(img)
-    #     if angle is not None:
-    #         print(angle)
-    #     cv2.imshow('img', img)
-    #     if cv2.waitKey(1) == 27:
-    #         break
+    while True:
+        img = cap.read()[1]
+        angle = line.get_angle(img)
+        if angle is not None:
+            print(angle)
+        cv2.imshow('img', img)
+        if cv2.waitKey(1) == 27:
+            break
     # endregion
         
     # region 直线识别第二测试
