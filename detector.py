@@ -117,10 +117,11 @@ class ColorDetector(object):
             lst.append((x, y, x + w, y + h))
         return img, lst
     
-    def draw_cyclic(self, img:cv2.typing.MatLike):
+    def draw_cyclic(self, img:cv2.typing.MatLike) -> tuple[cv2.typing.MatLike, list[tuple[int, int]]]:
         """在图像上绘制圆形
         * img: 传入的二值化图像数据
         * 返回值：绘制圆形后的图像数据，圆形的坐标(圆心，半径)"""
+        # XXX:如果没有识别到原形怎么办，会返回什么
         lst = []
         for cnt in ColorDetector._get_edge(img):										# 遍历轮廓数据
             (x, y), radius = cv2.minEnclosingCircle(cnt)
@@ -168,7 +169,7 @@ class LineDetector(object):
         # 使用霍夫变换检测直线
         lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
 
-        if lines is not None:
+        if lines is not None:       # 如果检测到直线
             for rho, theta in lines[0]:
                 # 计算直线的斜率
                 a = np.cos(theta)
