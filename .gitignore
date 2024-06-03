@@ -140,6 +140,9 @@ cython_debug/
 # VsCode
 .vscode/
 
+# PyCharm
+.idea/
+
 # training
 *.jpg
 *.png
