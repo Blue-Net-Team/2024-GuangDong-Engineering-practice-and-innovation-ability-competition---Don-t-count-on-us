@@ -1,3 +1,4 @@
+from typing import Iterable
 import serial
 import struct
 
@@ -9,7 +10,7 @@ class UART(QRdetector):
         super().__init__()
 
     @staticmethod
-    def pack_int(func):
+    def send_pack_int(func):
         """包头包尾修饰器
         * 包头：0xff
         * 包尾：0xfe"""
@@ -22,7 +23,7 @@ class UART(QRdetector):
         return wrapper
 
     @staticmethod
-    def pack_str(func):
+    def send_pack_str(func):
         """包头包尾修饰器
         * 包头：@
         * 包尾：\r\n"""
@@ -32,8 +33,30 @@ class UART(QRdetector):
             super().write(b'\r\n')     # 包尾
         return wrapper
     
-    @pack_int
-    def send_arr(self, args:list):
+    @staticmethod
+    def read_pack(func):
+        """包头包尾修饰器
+        * 包头：0xff
+        * 包尾：0xfe"""
+        head = 255
+        HEAD = head.to_bytes(1, 'big')
+
+        tail = 254
+        TAIL = tail.to_bytes(1, 'big')
+
+        def wrapper(self, _size:int):
+            while True:
+                if super().read(1) == HEAD:
+                    break
+            res = func(self, _size)
+            while True:
+                if super().read(1) == TAIL:
+                    break
+            return res
+        return wrapper
+    
+    @send_pack_int
+    def send_arr(self, args:Iterable):
         """发送数组"""
         for i in args:
             data = struct.pack('<i', i)     # 发送四个字节，端小字节序
@@ -41,15 +64,21 @@ class UART(QRdetector):
             super().write(data)
         print()
 
-    @pack_int
+    @send_pack_int
     def send(self, data:int):
         """发送整型数据"""
         newdata = struct.pack('<i', data)
         super().write(newdata)
     
-    @pack_str
+    @send_pack_str
     def write(self, data:str) -> int | None:
         return super().write(data.encode('ascii'))
+    
+    @read_pack
+    def read(self, size: int = 1) -> str:
+        data = super().read(size)
+        res = data.decode('ascii')
+        return res
     
     def __del__(self) -> None:
         return self.close()
