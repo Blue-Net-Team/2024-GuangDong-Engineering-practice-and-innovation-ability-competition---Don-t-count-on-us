@@ -154,7 +154,7 @@ class LineDetector(object):
     def __init__(self) -> None:
         pass
 
-    def get_angle(self, _img:cv2.typing.MatLike) -> float|None:
+    def get_angle(self, _img:cv2.typing.MatLike, ifdubug:bool=False) -> float|None:
         """获取直线的角度"""
         # 转换为灰度图
         gray = cv2.cvtColor(_img, cv2.COLOR_BGR2GRAY)
@@ -177,10 +177,29 @@ class LineDetector(object):
                 angle = np.arctan2(b, a) * 180 / np.pi
                 # 将识别的线画出来
                 # cv2.line(_img, (0, 0), (int(a * 1000), int(b * 1000)), (0, 0, 255), 2)
-                cv2.imshow('img', _img)
+                if ifdubug:
+                    cv2.imshow('img', _img)
                 return angle
 
         return None
+    
+    def get_distance(self, imt:cv2.typing.MatLike, ifdebug:bool=False) -> int|None:
+        """获取直线的距离
+        * img: 传入的图像数据
+        * y0: 基准点"""
+        gray = cv2.cvtColor(imt, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+        # 闭运算
+        edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (5, 5))        # type:ignore
+        # 获取直线
+        lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
+
+        if lines is not None:
+            for rho, theta in lines[0]:
+                if ifdebug:
+                    cv2.imshow('edges', edges)
+                return rho
+        
     
     
 class QRdetector(serial.Serial):
