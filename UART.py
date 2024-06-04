@@ -36,21 +36,19 @@ class UART(QRdetector):
     @staticmethod
     def read_pack(func):
         """包头包尾修饰器
-        * 包头：0xff
-        * 包尾：0xfe"""
-        head = 255
-        HEAD = head.to_bytes(1, 'big')
+        * 包头：@
+        * 包尾：\r\n"""
+        HEAD = b'@'
 
-        tail = 254
-        TAIL = tail.to_bytes(1, 'big')
+        TAIL = b'\r\n'
 
-        def wrapper(self, _size:int):
+        def wrapper(self, _size:int=1):
             while True:
                 if super().read(1) == HEAD:
                     break
             res = func(self, _size)
             while True:
-                if super().read(1) == TAIL:
+                if super().read(2) == TAIL:
                     break
             return res
         return wrapper
@@ -75,7 +73,7 @@ class UART(QRdetector):
         return super().write(data.encode('ascii'))
     
     @read_pack
-    def read(self, size: int = 1) -> str:
+    def read(self, size:int = 1) -> str:
         data = super().read(size)
         res = data.decode('ascii')
         return res
