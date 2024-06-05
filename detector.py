@@ -153,14 +153,28 @@ class ColorDetector(object):
 class LineDetector(object):
     """直线识别器"""
     def __init__(self) -> None:
-        pass
+        self.minval = 0
+        self.maxval = 255
+
+    def __call__(self,id:int=0) -> None:
+        cv2.namedWindow(f'trackbar{id}', cv2.WINDOW_NORMAL)
+        cv2.createTrackbar('minval', f'trackbar{id}', self.minval, 255, self.minval_callback)
+        cv2.createTrackbar('maxval', f'trackbar{id}', self.maxval, 255, self.maxval_callback)
+
+    # region trackbar回调函数
+    def minval_callback(self, x):
+        self.minval = x
+
+    def maxval_callback(self, x):
+        self.maxval = x
+    # endregion
 
     def get_angle(self, _img:cv2.typing.MatLike, ifdubug:bool=False) -> float|None:
         """获取直线的角度"""
         # 转换为灰度图
         gray = cv2.cvtColor(_img, cv2.COLOR_BGR2GRAY)
         # 使用Canny算法进行边缘检测
-        edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+        edges = cv2.Canny(gray, self.minval, self.maxval, apertureSize=3)
         # 闭运算
         edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (5, 5))        # type:ignore
         # 膨胀
@@ -189,7 +203,7 @@ class LineDetector(object):
         * img: 传入的图像数据
         * y0: 基准点"""
         gray = cv2.cvtColor(imt, cv2.COLOR_BGR2GRAY)
-        edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+        edges = cv2.Canny(gray, self.minval, self.maxval, apertureSize=3)
         # 闭运算
         edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (5, 5))        # type:ignore
         # 获取直线
