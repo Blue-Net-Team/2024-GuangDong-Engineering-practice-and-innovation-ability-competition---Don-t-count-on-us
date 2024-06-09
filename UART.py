@@ -57,15 +57,14 @@ class UART(QRdetector):
     def send_arr(self, args:Iterable):
         """发送数组"""
         for i in args:
-            data = struct.pack('<i', i)     # 发送四个字节，端小字节序
-            print(f'发送数据：{i}',end='')
+            data = struct.pack('>i', i)     # 发送四个字节，端小字节序
             super().write(data)
         print()
 
     @send_pack_int
     def send(self, data:int):
         """发送整型数据"""
-        newdata = struct.pack('<i', data)
+        newdata = struct.pack('>i', data)
         super().write(newdata)
     
     @send_pack_str
