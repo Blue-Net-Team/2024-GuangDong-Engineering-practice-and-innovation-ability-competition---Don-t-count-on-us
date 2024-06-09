@@ -124,10 +124,11 @@ class ColorDetector(object):
         # XXX:如果没有识别到原形怎么办，会返回什么
         lst = []
         for cnt in ColorDetector._get_edge(img):										# 遍历轮廓数据
-            (x, y), radius = cv2.minEnclosingCircle(cnt)
+            (x, y), radius = cv2.minEnclosingCircle(cnt)        # 获取最小外接圆的圆心坐标和半径
             center = (int(x), int(y))
             radius = int(radius)
-            if (self.minarea > radius*radius or radius*radius > self.maxarea):
+            area = cv2.contourArea(cnt)
+            if (self.minarea > area or area > self.maxarea):
                 continue
             if radius < 10:     # 排除小圆
                 continue
@@ -181,7 +182,7 @@ class LineDetector(object):
         edges = cv2.dilate(edges, (5, 5))                               # type:ignore
         cv2.imshow('edges', edges)
         # 使用霍夫变换检测直线
-        lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
+        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200)
 
         if lines is not None:       # 如果检测到直线
             for rho, theta in lines[0]:
@@ -198,7 +199,7 @@ class LineDetector(object):
 
         return None
     
-    def get_distance(self, imt:cv2.typing.MatLike, ifdebug:bool=False) -> int|None:
+    def get_distance(self, imt:cv2.typing.MatLike, y0:int=0, ifdebug:bool=False) -> int|None:
         """获取直线的距离
         * img: 传入的图像数据
         * y0: 基准点"""
@@ -207,15 +208,15 @@ class LineDetector(object):
         # 闭运算
         edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (5, 5))        # type:ignore
         # 获取直线
-        lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
+        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200)
 
         if lines is not None:
             for rho, theta in lines[0]:
                 if ifdebug:
                     cv2.imshow('edges', edges)
-                return rho
+                    # XXX:可能存在问题
+                return rho-y0
         
-    
     
 class QRdetector(serial.Serial):
     def __init__(self) -> None:
