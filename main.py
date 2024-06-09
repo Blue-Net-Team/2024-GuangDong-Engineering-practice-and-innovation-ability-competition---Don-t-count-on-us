@@ -22,16 +22,18 @@ r"""
 			佛祖保佑       工创省一
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 """
+from doctest import debug
 import math
-import time
+from typing import Iterable
 import numpy as np
 from UART import UART
 import detector
 import cv2
 import threading
 from img_trans import VideoStreaming
-import RPi.GPIO as GPIO
-    
+import RPi.GPIO as GPIO     # type: ignore
+
+# TODO: 约定信号引脚
 start_pin = 18      # 启动电平引脚
 sign_pin = 17       # 信号引脚
 c_pin = 27          # 角度校准引脚
@@ -48,22 +50,31 @@ thresholds = [
     ([0, 0, 0], [0, 0, 0]),
     ([0, 0, 0], [0, 0, 0]),
 ]
-MSG_SEND_dict = {
+COLOR_dict = {
     0:'R',
     1:'G',
     2:'B'
 }
+COLOR_dict_reverse = {
+    'R':0,
+    'G':1,
+    'B':2
+}
 
 
 class Solution:
-    def __init__(self):
+    def __init__(self, ifdebug:bool=False):
+        self.debug = ifdebug
         # TODO:测试夹爪的圆心坐标,半径
         self.circle_point = (100, 100)
         self.circle_r = 50
-        self.circle_area = math.pi * self.circle_r ** 2
 
         # 打开读取图像线程
         threading.Thread(target=self.get_img).start()
+
+        if debug:
+            # 打开远程图传线程
+            threading.Thread(target=self.streaming).start()
 
         # 创建识别器对象
         self.color = detector.ColorDetector()
@@ -78,200 +89,121 @@ class Solution:
         self.cap = cv2.VideoCapture(0)
 
         self.mask = None
-        self.sending_start = False
         pass
 
-
-    def correcttion(self):
-        """校准小车角度"""
-        while True:
-            if GPIO.input(c_pin):
-                _img = self.cap.read()[1]
-                angle = self.line.get_angle(_img)
-                if angle is not None:
-                    if abs(angle-90) > 2:
-                        self.ser.send(int(angle))
-
-
     def streaming(self):
-        self.stream = VideoStreaming('10.0.0.3', 8000)
-        self.stream.connecting()
-        self.stream.start()
-        while True:
-            if self.img is not None:
-                self.stream.send(self.img)
-
+        """远程图传"""
+        if self.debug:
+            self.stream = VideoStreaming('10.0.0.3', 8000)
+            self.stream.connecting()
+            self.stream.start()
+            while True:
+                if self.img is not None:
+                    self.stream.send(self.img)
 
     def get_img(self):
+        """读取摄像头图像"""
         while True:
             ret, self.img = self.cap.read()
             cv2.circle(self.img, self.circle_point, self.circle_r, (0, 0, 255), 2)
             if ret:
                 break
 
-
-    def send_msg(self, msg:str|int|list):
+    def send_msg(self, msg:str|int|Iterable):
         """从串口发送信号"""
         if isinstance(msg, str):
             self.ser.write(msg)
         elif isinstance(msg, int):
             self.ser.send(msg)
-        elif isinstance(msg, tuple):
+        elif isinstance(msg, Iterable):
             self.ser.send_arr(msg)
 
+    def detect_color(self, _colorindex:int) -> bool:
+        """颜色识别
+        * _colorindex: 颜色索引，0红 1绿 2蓝
+        * return: 是否识别到颜色"""
+        self.color.set_threshold(thresholds[_colorindex])       # 设置阈值
+        # XXX:while True是不是可以去掉，在外部封装
+        while True:
+            mask = self.color.filter(self.img)                                 # 过滤
+            img, p = self.color.draw_cyclic(mask)
+            if not p:
+                continue
+            return True
     
-    def SENG(self, msg):
-        """发送信号"""
-        while self.sending_start:
-            self.send_msg(msg)
+    def LOCATE_cycle(self, _color:str) -> tuple[int, int]|None:
+        """色环定位
+        * _color: 颜色索引
+        * return: 圆心坐标差值，如果识别到多个或者没有识别到返回None"""
+        color_index = COLOR_dict_reverse[_color]
+        self.color.set_threshold(thresholds[color_index])       # 设置阈值
+        
+        mask = self.color.filter(self.img)                                 # 过滤
+        img, p = self.color.draw_cyclic(mask)
+        if len(p) == 1:
+            # XXX:是x，y还是y，x
+            x0, y0 = self.circle_point
+            x, y = p[0]     # 圆心坐标
+            difference = x-x0, y-y0
+            self.send_msg(difference)
+            return difference
+        
+    
+    def CORRECTION_angle(self) -> int|None:
+        """校准小车与直线的角度
+        * return: 识别到的角度,如果没有识别到直线返回None"""
+        angle = self.line.get_angle(self.img)
+        if angle is not None:
+            angle = int(angle)
+            if abs(angle-90) > 0:
+                self.send_msg((1, angle))
+                return angle
+
+    
+    def CORRECTION_distance(self):
+        """校准小车与直线的距离"""
+        _img = self.cap.read()[1]
+        distance = self.line.get_distance(self.img)
+        if distance is not None:
+            self.send_msg((2, distance))
+
+
+    def DETECTCOLOR(self):
+        """
+        颜色识别, 识别到什么颜色就发送什么信号(1,2,3)
+        """
+        for i in range(3):
+            if self.detect_color(i):
+                self.send_msg((3, i))
+
+    
+    def LOCATECOLOR(self, _colorindex:int):
+        """
+        色环定位
+        ----
+        * _colorindex: 颜色索引
+        """
+        self.color.set_threshold(thresholds[_colorindex])       # 设置阈值
+        mask = self.color.filter(self.img)
+        res, p = self.color.draw_cyclic(mask)
+
+        dx, dy = p[0][0] - self.circle_point[0], p[0][1] - self.circle_point[1]
+        self.send_msg((4, dx, dy))
+        
 
 
     def __call__(self):
-        # 创建校准线程
-        c = threading.Thread(target=self.correcttion)
-        c.start()
-
-        # 打开图传线程
-        trans = threading.Thread(target=self.streaming)
-        trans.start()
-
-        # 二维码识别
         while True:
-            qr_lst = self.ser.qr_detect()
-            if qr_lst is not None:
-                break
-        p = None
-        def UPDATE():
-            """更新"""
-            global last_p
-            while True:
-                last_p = p
-                time.sleep(0.5)
-        threading.Thread(target=UPDATE).start()
-        for msg in qr_lst:
-            # region 第一次到原料区拿取物料
-            """先停车，然后确定物料停止，再校准位置(持续发送x轴距离，直到重叠面积达到95%)
-            拉高17引脚电平，等待0.5秒，拉低17引脚电平，从而触发物料夹持"""
-            for i in msg:
-                # XXX: 可能有问题
-                p = None
-                while True:
-                    threshold = thresholds[int(i)]      # 获取阈值
-                    self.color.set_threshold(threshold)     # 设置阈值
-                    self.mask = self.color.filter(self.img)    # 过滤
-                    self.mask, p = self.color.draw_cyclic(self.mask)    # 画出色环
+            data = self.ser.read()
 
-                    # region 判断是否停止
-                    if last_p is not None:
-                        change_p = last_p[0][0]-p[0][0], last_p[0][1]-p[0][1]
-                    else:
-                        change_p = p[0]
-                    
-                    change = change_p[0] ** 2 + change_p[1] ** 2
-                    change = change ** 0.5
-
-                    if change < 5:      #TODO: 确定是不是5,物料半秒移动的距离
-                        break
-                    # endregion
-
-                # region 校准位置
-                defence_x = None
-                self.sending_start = True
-                threading.Thread(target=self.SENG, args=(defence_x,)).start()
-
-                while True:
-                    self.mask = self.color.filter(self.img)    # 过滤
-                    self.mask, p = self.color.draw_cyclic(self.mask)    # 画出色环
-                    defence_x = p[0][0]-self.circle_point[0]        # 计算色环与圆心的x轴距
-                    # 计算重叠面积
-                    area = circle_intersection_area(p[0][0], p[0][1], p[1], self.circle_point[0], self.circle_point[1], self.circle_r)
-
-                    if area/self.circle_area > 0.95:
-                        GPIO.output(sign_pin, 1)
-                        time.sleep(0.5)
-                        GPIO.output(sign_pin, 0)
-                        self.sending_start = False
-                        break
-                # endregion
-
-            # endregion
-                    
-            # region 将物料放到粗加工区 无序
-            """
-            定位色环   ->   停车信号 
-                ^              |
-                |              v
-             继续向前   <-  做出动作
-            定位红绿蓝色环，发出RGB信号到UART
-            """
-            for i in range(3):
-                threshold = thresholds[i]
-                self.color.set_threshold(threshold)
-                while True:
-                    self.mask = self.color.filter(self.img)
-                    self.mask, p = self.color.draw_cyclic(self.mask)
-                    
-                    # 计算重叠面积
-                    area = circle_intersection_area(p[0][0], p[0][1], p[1], self.circle_point[0], self.circle_point[1], self.circle_r)
-                    if area/self.circle_area > 0.95:
-                        self.send_msg(MSG_SEND_dict[i])
-                        break
-            # endregion
-                    
-            # region 将物料从粗加工取出 有序
-            for i in msg:
-                # TODO:讨论部分
-                """放完物料之后小车在区域尾部，电控读取了二维码的顺序信息后，
-                在此处是不是应该根据信息直接来到对应的颜色区域，然后我在进行调整，
-                因为颜色区域是红绿蓝顺序的。
-                
-                是不是应该拉高一个引脚电平（到了大概位置之后）然后我在开始调整呢？"""
-                # XXX: 未讨论而且可能有问题
-                # region 校准位置
-                defence_x = None
-                self.sending_start = True
-                threading.Thread(target=self.SENG, args=(defence_x,)).start()
-
-                while True:
-                    self.mask = self.color.filter(self.img)    # 过滤
-                    self.mask, p = self.color.draw_cyclic(self.mask)    # 画出色环
-                    defence_x = p[0][0]-self.circle_point[0]        # 计算色环与圆心的x轴距
-                    # 计算重叠面积
-                    area = circle_intersection_area(p[0][0], p[0][1], p[1], self.circle_point[0], self.circle_point[1], self.circle_r)
-
-                    if area/self.circle_area > 0.95:
-                        GPIO.output(sign_pin, 1)
-                        time.sleep(0.5)
-                        GPIO.output(sign_pin, 0)
-                        self.sending_start = False
-                        break
-                # endregion
-            # endregion
-                    
-            # region 将物料放到暂存区 有序
-            # TODO:需要讨论,与上面相同
-            for i in msg:
-                defence_x = None
-                self.sending_start = True
-                threading.Thread(target=self.SENG, args=(defence_x,)).start()
-                
-                while True:
-                    if GPIO.input(start_pin):   # 启动引脚被拉高电平
-                        self.mask = self.color.filter(self.img)
-                        self.mask, p = self.color.draw_cyclic(self.mask)
-
-                        # 计算重叠面积
-                        area = circle_intersection_area(p[0][0], p[0][1], p[1], self.circle_point[0], self.circle_point[1], self.circle_r)
-
-                        if area/self.circle_area > 0.95:
-                            GPIO.output(sign_pin, 1)
-                            time.sleep(0.5)
-                            GPIO.output(sign_pin, 0)
-                            self.sending_start = False
-                            break
-            # endregion
-
-
+            if data == 'A':self.CORRECTION_angle()
+            elif data == 'D':self.CORRECTION_distance()
+            elif data == 'color':self.DETECTCOLOR()
+            elif data[0] == 'C':
+                if data[1] == 'R':self.LOCATECOLOR(0)
+                elif data[1] == 'G':self.LOCATECOLOR(1)
+                elif data[1] == 'B':self.LOCATECOLOR(2)
+        
 
 def circle_intersection_area(x0, y0, r0, x1, y1, r1):
     """计算两个圆的重叠面积"""
