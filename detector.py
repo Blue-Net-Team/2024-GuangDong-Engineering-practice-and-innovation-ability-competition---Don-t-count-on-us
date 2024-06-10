@@ -79,10 +79,11 @@ class ColorDetector(object):
         self.maxarea = maxarea
     # endregion
 
-    def filter(self, img:cv2.typing.MatLike, _iterations:int=1):
+    def filter(self, img:cv2.typing.MatLike|None, _iterations:int=1):
         """颜色识别 二值化滤波
         * img: 传入的图像数据
         * 返回值：二值化过滤后的图像数据"""
+        if img is None:return None
         _shape = img.shape
         try:
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)				# 将BGR图像转换成HSV图像
@@ -120,8 +121,7 @@ class ColorDetector(object):
     def draw_cyclic(self, img:cv2.typing.MatLike) -> tuple[cv2.typing.MatLike, list[tuple[int, int]]]:
         """在图像上绘制圆形
         * img: 传入的二值化图像数据
-        * 返回值：绘制圆形后的图像数据，圆形的坐标(圆心，半径)"""
-        # XXX:如果没有识别到原形怎么办，会返回什么
+        * 返回值：绘制圆形后的图像数据，圆形的坐标(圆心，半径),如果没有识别到圆形，图像不会绘制圆形，并且返回空列表"""
         lst = []
         for cnt in ColorDetector._get_edge(img):										# 遍历轮廓数据
             (x, y), radius = cv2.minEnclosingCircle(cnt)        # 获取最小外接圆的圆心坐标和半径
@@ -170,8 +170,11 @@ class LineDetector(object):
         self.maxval = x
     # endregion
 
-    def get_angle(self, _img:cv2.typing.MatLike, ifdubug:bool=False) -> float|None:
-        """获取直线的角度"""
+    def get_angle(self, _img:cv2.typing.MatLike|None, ifdubug:bool=False) -> float|None:
+        """获取直线的角度
+        * img: 传入的图像数据
+        * ifdubug: 是否调试"""
+        if _img is None:return None
         # 转换为灰度图
         gray = cv2.cvtColor(_img, cv2.COLOR_BGR2GRAY)
         # 使用Canny算法进行边缘检测
@@ -180,7 +183,7 @@ class LineDetector(object):
         edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (5, 5))        # type:ignore
         # 膨胀
         edges = cv2.dilate(edges, (5, 5))                               # type:ignore
-        cv2.imshow('edges', edges)
+        if ifdubug: cv2.imshow('edges', edges)
         # 使用霍夫变换检测直线
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200)
 
@@ -193,28 +196,27 @@ class LineDetector(object):
                 angle = np.arctan2(b, a) * 180 / np.pi
                 # 将识别的线画出来
                 # cv2.line(_img, (0, 0), (int(a * 1000), int(b * 1000)), (0, 0, 255), 2)
-                if ifdubug:
-                    cv2.imshow('img', _img)
                 return angle
 
         return None
     
-    def get_distance(self, imt:cv2.typing.MatLike, y0:int=0, ifdebug:bool=False) -> int|None:
+    def get_distance(self, imt:cv2.typing.MatLike|None, y0:int=0, ifdebug:bool=False) -> int|None:
         """获取直线的距离
         * img: 传入的图像数据
-        * y0: 基准点"""
+        * y0: 基准点
+        * ifdebug: 是否调试"""
+        if imt is None:return None
         gray = cv2.cvtColor(imt, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, self.minval, self.maxval, apertureSize=3)
         # 闭运算
         edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (5, 5))        # type:ignore
+        if ifdebug: cv2.imshow('edges', edges)
         # 获取直线
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200)
 
         if lines is not None:
             for rho, theta in lines[0]:
-                if ifdebug:
-                    cv2.imshow('edges', edges)
-                    # XXX:可能存在问题
+                # TODO:需要确定基准点！！
                 return rho-y0
         
     
@@ -249,15 +251,14 @@ if __name__ == '__main__':
     # endregion
         
     # region 直线识别第二测试
-    # p1 = (0, 400)
-    # p2 = (640, 400)
-    # while True:
-    #     img = cap.read()[1]
-    #     angle = line.draw_and_get_angle_difference(img, p1, p2)
-    #     if angle is not None:
-    #         print(angle)
-    #     cv2.imshow('img', img)
-    #     if cv2.waitKey(1) == 27:
-    #         break
+    """ y0 = 400
+    while True:
+        img = cap.read()[1]
+        angle = line.get_distance(img, y0=y0)
+        if angle is not None:
+            print(angle)
+        cv2.imshow('img', img)
+        if cv2.waitKey(1) == 27:
+            break """
     # endregion
     pass
