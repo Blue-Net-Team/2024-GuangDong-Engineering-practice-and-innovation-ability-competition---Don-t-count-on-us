@@ -12,16 +12,6 @@ thresholds = [
     ([0, 0, 0], [0, 0, 0]),
     ([0, 0, 0], [0, 0, 0]),
 ]
-COLOR_dict = {
-    0:'R',
-    1:'G',
-    2:'B'
-}
-COLOR_dict_reverse = {
-    'R':0,
-    'G':1,
-    'B':2
-}
 
 class ReceiveImg(object):
     def __init__(self, host, port):
