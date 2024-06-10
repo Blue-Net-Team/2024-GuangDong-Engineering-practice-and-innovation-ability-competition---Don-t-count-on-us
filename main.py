@@ -22,26 +22,12 @@ r"""
 			佛祖保佑       工创省一
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 """
-from doctest import debug
 import math
 from typing import Iterable
-import numpy as np
 from UART import UART
 import detector
 import cv2
-import threading
-from img_trans import VideoStreaming
-import RPi.GPIO as GPIO     # type: ignore
 
-# TODO: 约定信号引脚
-start_pin = 18      # 启动电平引脚
-sign_pin = 17       # 信号引脚
-c_pin = 27          # 角度校准引脚
-
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(start_pin, GPIO.IN)
-GPIO.setup(sign_pin, GPIO.OUT)
-GPIO.setup(c_pin, GPIO.IN)
 
 #TODO: 完善阈值表, 0红 1绿 2蓝
 thresholds = [
@@ -63,18 +49,10 @@ COLOR_dict_reverse = {
 
 
 class Solution:
-    def __init__(self, ifdebug:bool=False):
-        self.debug = ifdebug
+    def __init__(self):
         # TODO:测试夹爪的圆心坐标,半径
         self.circle_point = (100, 100)
         self.circle_r = 50
-
-        # 打开读取图像线程
-        threading.Thread(target=self.get_img).start()
-
-        if debug:
-            # 打开远程图传线程
-            threading.Thread(target=self.streaming).start()
 
         # 创建识别器对象
         self.color = detector.ColorDetector()
@@ -91,24 +69,6 @@ class Solution:
         self.mask = None
         pass
 
-    def streaming(self):
-        """远程图传"""
-        if self.debug:
-            self.stream = VideoStreaming('10.0.0.3', 8000)
-            self.stream.connecting()
-            self.stream.start()
-            while True:
-                if self.img is not None:
-                    self.stream.send(self.img)
-
-    def get_img(self):
-        """读取摄像头图像"""
-        while True:
-            ret, self.img = self.cap.read()
-            cv2.circle(self.img, self.circle_point, self.circle_r, (0, 0, 255), 2)
-            if ret:
-                break
-
     def send_msg(self, msg:str|int|Iterable):
         """从串口发送信号"""
         if isinstance(msg, str):
@@ -123,49 +83,29 @@ class Solution:
         * _colorindex: 颜色索引，0红 1绿 2蓝
         * return: 是否识别到颜色"""
         self.color.set_threshold(thresholds[_colorindex])       # 设置阈值
-        # XXX:while True是不是可以去掉，在外部封装
-        while True:
-            mask = self.color.filter(self.img)                                 # 过滤
-            img, p = self.color.draw_cyclic(mask)
-            if not p:
-                continue
-            return True
-    
-    def LOCATE_cycle(self, _color:str) -> tuple[int, int]|None:
-        """色环定位
-        * _color: 颜色索引
-        * return: 圆心坐标差值，如果识别到多个或者没有识别到返回None"""
-        color_index = COLOR_dict_reverse[_color]
-        self.color.set_threshold(thresholds[color_index])       # 设置阈值
-        
+        if self.img is None:return False
         mask = self.color.filter(self.img)                                 # 过滤
+        if mask is None:return False
         img, p = self.color.draw_cyclic(mask)
-        if len(p) == 1:
-            # XXX:是x，y还是y，x
-            x0, y0 = self.circle_point
-            x, y = p[0]     # 圆心坐标
-            difference = x-x0, y-y0
-            self.send_msg(difference)
-            return difference
-        
+        if not p:return False
+        return True
     
-    def CORRECTION_angle(self) -> int|None:
+    
+    def CORRECTION_angle(self) -> tuple[int, int]|None:
         """校准小车与直线的角度
         * return: 识别到的角度,如果没有识别到直线返回None"""
         angle = self.line.get_angle(self.img)
         if angle is not None:
             angle = int(angle)
             if abs(angle-90) > 0:
-                self.send_msg((1, angle))
-                return angle
+                return 1, angle
 
-    
-    def CORRECTION_distance(self):
+
+    def CORRECTION_distance(self) -> tuple[int,int]|None:
         """校准小车与直线的距离"""
-        _img = self.cap.read()[1]
         distance = self.line.get_distance(self.img)
         if distance is not None:
-            self.send_msg((2, distance))
+            return 2, distance
 
 
     def DETECTCOLOR(self):
@@ -174,9 +114,9 @@ class Solution:
         """
         for i in range(3):
             if self.detect_color(i):
-                self.send_msg((3, i))
+                return 3, i
 
-    
+
     def LOCATECOLOR(self, _colorindex:int):
         """
         色环定位
@@ -185,24 +125,46 @@ class Solution:
         """
         self.color.set_threshold(thresholds[_colorindex])       # 设置阈值
         mask = self.color.filter(self.img)
+        if mask is None:return None
         res, p = self.color.draw_cyclic(mask)
 
+        if not p: return None
+
         dx, dy = p[0][0] - self.circle_point[0], p[0][1] - self.circle_point[1]
-        self.send_msg((4, dx, dy))
+        return 4, dx, dy
         
 
 
     def __call__(self):
         while True:
             data = self.ser.read()
+            self.img = self.cap.read()[1]
 
-            if data == 'A':self.CORRECTION_angle()
-            elif data == 'D':self.CORRECTION_distance()
-            elif data == 'color':self.DETECTCOLOR()
+            if data == 'A':
+                data = self.CORRECTION_angle()
+                if data is not None:
+                    self.send_msg(data)
+            elif data == 'D':
+                data = self.CORRECTION_distance()
+                if data is not None:
+                    self.send_msg(data)
+            elif data == 'color':
+                data = self.DETECTCOLOR()
+                if data is not None:
+                    self.send_msg(data)
             elif data[0] == 'C':
-                if data[1] == 'R':self.LOCATECOLOR(0)
-                elif data[1] == 'G':self.LOCATECOLOR(1)
-                elif data[1] == 'B':self.LOCATECOLOR(2)
+                if data[1] == 'R':
+                    data = self.LOCATECOLOR(0)
+                    if data is not None:
+                        self.send_msg(data)
+                elif data[1] == 'G':
+                    data = self.LOCATECOLOR(1)
+                    if data is not None:
+                        self.send_msg(data)
+                elif data[1] == 'B':
+                    data = self.LOCATECOLOR(2)
+                    if data is not None:
+                        self.send_msg(data)
         
 
 def circle_intersection_area(x0, y0, r0, x1, y1, r1):
