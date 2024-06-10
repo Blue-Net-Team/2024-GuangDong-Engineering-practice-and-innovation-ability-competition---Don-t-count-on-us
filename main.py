@@ -50,6 +50,13 @@ COLOR_dict_reverse = {
 
 class Solution:
     def __init__(self):
+        self.init_part1()
+        # 创建串口对象，self.ser继承了二维码识别的功能
+        self.ser = UART()
+        self.cap = cv2.VideoCapture(0)
+
+
+    def init_part1(self):
         # TODO:测试夹爪的圆心坐标,半径
         self.circle_point = (100, 100)
         self.circle_r = 50
@@ -62,12 +69,7 @@ class Solution:
         self.color.minarea = 0
         self.color.maxarea = 100000
 
-        # 创建串口对象，self.ser继承了二维码识别的功能
-        self.ser = UART()
-        self.cap = cv2.VideoCapture(0)
-
         self.mask = None
-        pass
 
     def send_msg(self, msg:str|int|Iterable):
         """从串口发送信号"""
