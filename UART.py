@@ -24,7 +24,7 @@ class UART(QRdetector):
 
     @staticmethod
     def send_pack_str(func):
-        """包头包尾修饰器
+        r"""包头包尾修饰器
         * 包头：@
         * 包尾：\r\n"""
         def wrapper(self, *args, **kwargs):
@@ -35,7 +35,7 @@ class UART(QRdetector):
     
     @staticmethod
     def read_pack(func):
-        """包头包尾修饰器
+        r"""包头包尾修饰器
         * 包头：@
         * 包尾：\r\n"""
         HEAD = b'@'
