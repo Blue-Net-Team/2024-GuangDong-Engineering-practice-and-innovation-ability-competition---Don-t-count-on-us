@@ -219,20 +219,6 @@ class LineDetector(object):
                 # TODO:需要确定基准点！！
                 return rho-y0
         
-    
-class QRdetector(serial.Serial):
-    def __init__(self) -> None:
-        super().__init__('/dev/ttyAMA0', 9600, timeout=1)
-        pass
-
-    def qr_detect(self) -> list[str]|None:
-        ori = self.read(8)
-        if ori == b'':
-            return None
-        msg = ori[:-1].decode()
-        lst = list(map(str, msg.split('+')))
-        return lst
-
 
 if __name__ == '__main__':
     #TODO: 测试代码
