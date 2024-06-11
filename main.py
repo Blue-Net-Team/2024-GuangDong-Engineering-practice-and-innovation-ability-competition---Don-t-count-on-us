@@ -140,6 +140,7 @@ class Solution:
     def __call__(self):
         while True:
             data = self.ser.read()
+            if not data: continue
             self.img = self.cap.read()[1]
 
             if data == 'A':

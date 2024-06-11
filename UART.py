@@ -2,12 +2,10 @@ from typing import Iterable
 import serial
 import struct
 
-from detector import QRdetector
 
-
-class UART(QRdetector):
+class UART(serial.Serial):
     def __init__(self):
-        super().__init__()
+        super().__init__('/dev/ttyAMA0', 9600)
 
     @staticmethod
     def send_pack_int(func):
@@ -33,26 +31,6 @@ class UART(QRdetector):
             super().write(b'\r\n')     # 包尾
         return wrapper
     
-    @staticmethod
-    def read_pack(func):
-        r"""包头包尾修饰器
-        * 包头：@
-        * 包尾：\r\n"""
-        HEAD = b'@'
-
-        TAIL = b'\r\n'
-
-        def wrapper(self, _size:int=1):
-            while True:
-                if super().read(1) == HEAD:
-                    break
-            res = func(self, _size)
-            while True:
-                if super().read(2) == TAIL:
-                    break
-            return res
-        return wrapper
-    
     @send_pack_int
     def send_arr(self, args:Iterable):
         """发送数组"""
@@ -71,11 +49,22 @@ class UART(QRdetector):
     def write(self, data:str) -> int | None:
         return super().write(data.encode('ascii'))
     
-    @read_pack
-    def read(self, size:int = 1) -> str:
-        data = super().read(size)
+    def read(self, head=b'@', tail=b'#') -> str|None:
+        PACKET_HEAD = head
+        PACKET_TAIL = tail
+
+        data = b''  # 用于存储接收到的数据
+
+        while True:
+            byte = super().read()
+            if byte == PACKET_HEAD:
+                data = b''
+                continue
+            if byte == PACKET_TAIL:
+                break
+            data += byte
         res = data.decode('ascii')
-        return res
+        return res if res else None
     
     def __del__(self) -> None:
         return self.close()
