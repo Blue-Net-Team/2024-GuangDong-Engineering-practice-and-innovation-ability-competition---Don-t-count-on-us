@@ -148,3 +148,6 @@ cython_debug/
 *.png
 *.jpeg
 *COCO
+
+# test 
+*test*
