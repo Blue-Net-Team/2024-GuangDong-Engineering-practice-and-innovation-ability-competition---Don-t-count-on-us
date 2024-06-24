@@ -1,4 +1,5 @@
 """在本地电脑运行"""
+import json
 import socket
 import cv2
 import numpy as np
@@ -75,6 +76,9 @@ class DEBUG(main.Solution):
         针对直线识别的鼠标事件回调函数"""
         if event == cv2.EVENT_LBUTTONDOWN:
             self.y = y
+            print(f'y:{self.y}')
+            with open('y.json', 'w') as f:
+                json.dump({'y':y}, f)
     # endregion
 
     # region 回调函数
@@ -115,7 +119,7 @@ class DEBUG(main.Solution):
 
     def SetLineThresholds(self):
         """设置直线识别相关阈值"""
-        self.y=0
+        self.ypath='y.json'
         main.detector.LineDetector.createTrackbar(self)        # 呼出trackbar
         cv2.namedWindow('img', cv2.WINDOW_NORMAL)
         cv2.setMouseCallback('img', self.mouse_action_Line)    # 设置鼠标事件回调函数
@@ -124,7 +128,7 @@ class DEBUG(main.Solution):
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
 
             angle = self.get_angle(self.img, True)
-            distance = self.get_distance(self.img, self.y, True)
+            distance = self.get_distance(self.img, self.ypath, True)
 
             print(f'angle:{angle}, distance:{distance}')
             cv2.imshow('img', self.img)
