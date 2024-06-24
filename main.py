@@ -48,7 +48,7 @@ COLOR_dict_reverse = {
 }
 
 
-class Solution:
+class Solution(detector.ColorDetector, detector.LineDetector):
     def __init__(self):
         self.init_part1()
         # 创建串口对象，self.ser继承了二维码识别的功能
@@ -62,12 +62,12 @@ class Solution:
         self.circle_r = 50
 
         # 创建识别器对象
-        self.color = detector.ColorDetector()
-        self.line = detector.LineDetector()
+        detector.ColorDetector.__init__(self)
+        detector.LineDetector.__init__(self)
 
         # 颜色识别器面积初始化
-        self.color.minarea = 0
-        self.color.maxarea = 100000
+        self.minarea = 0
+        self.maxarea = 100000
 
         self.mask = None
 
@@ -84,11 +84,11 @@ class Solution:
         """颜色识别
         * _colorindex: 颜色索引，0红 1绿 2蓝
         * return: 是否识别到颜色"""
-        self.color.set_threshold(thresholds[_colorindex])       # 设置阈值
+        self.set_threshold(thresholds[_colorindex])       # 设置阈值
         if self.img is None:return False
-        mask = self.color.filter(self.img)                                 # 过滤
+        mask = self.filter(self.img)                                 # 过滤
         if mask is None:return False
-        img, p = self.color.draw_cyclic(mask)
+        img, p = self.draw_cyclic(mask)
         if not p:return False
         return True
     
@@ -96,7 +96,7 @@ class Solution:
     def CORRECTION_angle(self) -> tuple[int, int]|None:
         """校准小车与直线的角度
         * return: 识别到的角度,如果没有识别到直线返回None"""
-        angle = self.line.get_angle(self.img)
+        angle = self.get_angle(self.img)
         if angle is not None:
             angle = int(angle)
             if abs(angle-90) > 0:
@@ -105,7 +105,7 @@ class Solution:
 
     def CORRECTION_distance(self) -> tuple[int,int]|None:
         """校准小车与直线的距离"""
-        distance = self.line.get_distance(self.img)
+        distance = self.get_distance(self.img)
         if distance is not None:
             return 2, distance
 
@@ -125,10 +125,10 @@ class Solution:
         ----
         * _colorindex: 颜色索引
         """
-        self.color.set_threshold(thresholds[_colorindex])       # 设置阈值
-        mask = self.color.filter(self.img)
+        self.set_threshold(thresholds[_colorindex])       # 设置阈值
+        mask = self.filter(self.img)
         if mask is None:return None
-        res, p = self.color.draw_cyclic(mask)
+        res, p = self.draw_cyclic(mask)
 
         if not p: return None
 
