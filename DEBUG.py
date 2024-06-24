@@ -52,23 +52,59 @@ class DEBUG(main.Solution):
     def __init__(self, iftrans:bool=True, capid:int=0) -> None:
         super().init_part1()
 
+        self.r = 20
+
         if iftrans:
             # 图传
             self.reveiver = ReceiveImg('10.0.0.3', 8000)
         else:
             self.reveiver = cv2.VideoCapture(capid)
 
+    # region 鼠标事件
+    def mouse_action_circlePoint(self, event, x, y, flags, param):
+        """鼠标事件回调函数
+        ====
+        针对色环定位的鼠标事件回调函数"""
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.circle_point = (x, y)
+            print(f'circle_point:{self.circle_point}')
+
+    def mouse_action_Line(self, event, x, y, flags, param):
+        """鼠标事件回调函数
+        ====
+        针对直线识别的鼠标事件回调函数"""
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.y = y
+    # endregion
+
+    # region 回调函数
+    def callback_circle(self, x):
+        self.circle_r = x
+
+    def createTrackbar_color_and_circle(self):
+        main.detector.ColorDetector.createTrackbar(self)        # 呼出trackbar
+        cv2.createTrackbar('r', 'Color and circle trackbar0', self.r, 400, self.callback_circle)
+    # endregion
 
     def SetColorThresholds(self):
-        self.color()
+        """
+        颜色识别的阈值调试和色环定位位置大小调试
+        """
+        self.createTrackbar_color_and_circle()        # 呼出trackbar
+        cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+        cv2.setMouseCallback('img', self.mouse_action_circlePoint)    # 设置鼠标事件回调函数
         while True:
             _, self.img = self.reveiver.read()
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
 
-            cv2.circle(self.img, self.circle_point, self.circle_r, (0, 255, 0), 2)
-            mask = self.color.filter(self.img)
+            # 画出色环应该在的位置和大小
+            img1 = self.img.copy()
+            cv2.circle(img1, self.circle_point, self.circle_r, (0, 255, 0), 2)
+            mask = self.filter(self.img)
 
-            cv2.imshow('img', self.img)
+            # self.img:原始图像
+            # img1:对img深拷贝然后再画圈的图像
+            cv2.imshow('img', img1)
 
             if mask is None: continue
             cv2.imshow('mask', mask)
@@ -76,15 +112,19 @@ class DEBUG(main.Solution):
             if cv2.waitKey(1) == 27:        # 按下ESC键退出
                 break
         
+
     def SetLineThresholds(self):
         """设置直线识别相关阈值"""
-        self.line()
+        self.y=0
+        main.detector.LineDetector.createTrackbar(self)        # 呼出trackbar
+        cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+        cv2.setMouseCallback('img', self.mouse_action_Line)    # 设置鼠标事件回调函数
         while True:
             _, self.img = self.reveiver.read()
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
 
-            angle = self.line.get_angle(self.img)
-            distance = self.line.get_distance(self.img)
+            angle = self.get_angle(self.img, True)
+            distance = self.get_distance(self.img, self.y, True)
 
             print(f'angle:{angle}, distance:{distance}')
             cv2.imshow('img', self.img)
