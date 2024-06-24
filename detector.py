@@ -34,19 +34,19 @@ class ColorDetector(object):
         self.high_s = _threshold[1][1]
         self.high_v = _threshold[1][2]
 
-    def __call__(self,id:int=0):
-        """使用call方法调出trackbar
+    def createTrackbar(self,_id:int=0):
+        """调出trackbar
         * id: 识别器的id的id"""
         # region 创建trackbar
-        cv2.namedWindow(f'trackbar{id}', cv2.WINDOW_NORMAL)
-        cv2.createTrackbar('low_h', f'trackbar{id}', self.low_h, 180, self.call_back_low_h)
-        cv2.createTrackbar('high_h', f'trackbar{id}', self.high_h, 180, self.call_back_high_h)
-        cv2.createTrackbar('low_s', f'trackbar{id}', self.low_s, 255, self.call_back_low_s)
-        cv2.createTrackbar('high_s', f'trackbar{id}', self.high_s, 255, self.call_back_high_s)
-        cv2.createTrackbar('low_v', f'trackbar{id}', self.low_v, 255, self.call_back_low_v)
-        cv2.createTrackbar('high_v', f'trackbar{id}', self.high_v, 255, self.call_back_high_v)
-        cv2.createTrackbar('minarea', f'trackbar{id}', self.minarea, 100000, self.call_back_minarea)
-        cv2.createTrackbar('maxarea', f'trackbar{id}', self.maxarea, 100000, self.call_back_maxarea)
+        cv2.namedWindow(f'Color and circle trackbar{_id}', cv2.WINDOW_NORMAL)
+        cv2.createTrackbar('low_h', f'Color and circle trackbar{_id}', self.low_h, 180, self.call_back_low_h)
+        cv2.createTrackbar('high_h', f'Color and circle trackbar{_id}', self.high_h, 180, self.call_back_high_h)
+        cv2.createTrackbar('low_s', f'Color and circle trackbar{_id}', self.low_s, 255, self.call_back_low_s)
+        cv2.createTrackbar('high_s', f'Color and circle trackbar{_id}', self.high_s, 255, self.call_back_high_s)
+        cv2.createTrackbar('low_v', f'Color and circle trackbar{_id}', self.low_v, 255, self.call_back_low_v)
+        cv2.createTrackbar('high_v', f'Color and circle trackbar{_id}', self.high_v, 255, self.call_back_high_v)
+        cv2.createTrackbar('minarea', f'Color and circle trackbar{_id}', self.minarea, 100000, self.call_back_minarea)
+        cv2.createTrackbar('maxarea', f'Color and circle trackbar{_id}', self.maxarea, 100000, self.call_back_maxarea)
         # endregion
         pass
 
@@ -157,10 +157,10 @@ class LineDetector(object):
         self.minval = 0
         self.maxval = 255
 
-    def __call__(self,id:int=0) -> None:
-        cv2.namedWindow(f'trackbar{id}', cv2.WINDOW_NORMAL)
-        cv2.createTrackbar('minval', f'trackbar{id}', self.minval, 255, self.minval_callback)
-        cv2.createTrackbar('maxval', f'trackbar{id}', self.maxval, 255, self.maxval_callback)
+    def createTrackbar(self,_id:int=0) -> None:
+        cv2.namedWindow(f'Line trackbar{_id}', cv2.WINDOW_NORMAL)
+        cv2.createTrackbar('minval', f'Line trackbar{_id}', self.minval, 255, self.minval_callback)
+        cv2.createTrackbar('maxval', f'Line trackbar{_id}', self.maxval, 255, self.maxval_callback)
 
     # region trackbar回调函数
     def minval_callback(self, x):
@@ -170,13 +170,14 @@ class LineDetector(object):
         self.maxval = x
     # endregion
 
-    def get_angle(self, _img:cv2.typing.MatLike|None, ifdubug:bool=False) -> float|None:
+    def get_angle(self, _img0:cv2.typing.MatLike|None, ifdubug:bool=False) -> float|None:
         """获取直线的角度
         * img: 传入的图像数据
         * ifdubug: 是否调试"""
-        if _img is None:return None
+        if _img0 is None:return None
+        _img1 = _img0.copy()
         # 转换为灰度图
-        gray = cv2.cvtColor(_img, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(_img1, cv2.COLOR_BGR2GRAY)
         # 使用Canny算法进行边缘检测
         edges = cv2.Canny(gray, self.minval, self.maxval, apertureSize=3)
         # 闭运算
@@ -188,25 +189,28 @@ class LineDetector(object):
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200)
 
         if lines is not None:       # 如果检测到直线
-            for rho, theta in lines[0]:
+            for line in lines:
+                x1, y1, x2, y2 = line[0]
                 # 计算直线的斜率
-                a = np.cos(theta)
-                b = np.sin(theta)
+                if x2 - x1 == 0:  # 避免除以零的错误
+                    continue
+                slope = (y2 - y1) / (x2 - x1)
                 # 计算直线的角度（以度为单位）
-                angle = np.arctan2(b, a) * 180 / np.pi
+                angle = np.arctan(slope) * 180 / np.pi
                 # 将识别的线画出来
-                # cv2.line(_img, (0, 0), (int(a * 1000), int(b * 1000)), (0, 0, 255), 2)
+                cv2.line(_img1, (x1, y1), (x2, y2), (0, 0, 255), 2)
                 return angle
 
         return None
     
-    def get_distance(self, imt:cv2.typing.MatLike|None, y0:int=0, ifdebug:bool=False) -> int|None:
+    def get_distance(self, img0:cv2.typing.MatLike|None, y0:int=0, ifdebug:bool=False) -> int|None:
         """获取直线的距离
         * img: 传入的图像数据
         * y0: 基准点
         * ifdebug: 是否调试"""
-        if imt is None:return None
-        gray = cv2.cvtColor(imt, cv2.COLOR_BGR2GRAY)
+        if img0 is None:return None
+        img1 = img0.copy()
+        gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, self.minval, self.maxval, apertureSize=3)
         # 闭运算
         edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (5, 5))        # type:ignore
@@ -214,10 +218,13 @@ class LineDetector(object):
         # 获取直线
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200)
 
-        if lines is not None:
-            for rho, theta in lines[0]:
-                # TODO:需要确定基准点！！
-                return rho-y0
+        if lines is not None:       # 如果检测到直线
+            for line in lines:
+                x1, y1, x2, y2 = line[0]
+                # 计算直线的长度
+                length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+                # 返回长度减去基准点的结果
+                return length - y0
         
 
 if __name__ == '__main__':
