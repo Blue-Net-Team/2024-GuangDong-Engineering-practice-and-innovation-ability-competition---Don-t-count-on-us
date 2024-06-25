@@ -1,3 +1,4 @@
+import json
 import cv2
 import numpy as np
 import serial
@@ -203,10 +204,10 @@ class LineDetector(object):
 
         return None
     
-    def get_distance(self, img0:cv2.typing.MatLike|None, y0:int=0, ifdebug:bool=False) -> int|None:
+    def get_distance(self, img0:cv2.typing.MatLike|None, ypath:str='y.json', ifdebug:bool=False) -> int|None:
         """获取直线的距离
         * img: 传入的图像数据
-        * y0: 基准点
+        * ypath: 基准点坐标保存的文件路径(json)
         * ifdebug: 是否调试"""
         if img0 is None:return None
         img1 = img0.copy()
@@ -217,6 +218,8 @@ class LineDetector(object):
         if ifdebug: cv2.imshow('edges', edges)
         # 获取直线
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200)
+        with open(ypath, 'r') as f:
+            y0 = json.load(f)['y']
 
         if lines is not None:       # 如果检测到直线
             for line in lines:

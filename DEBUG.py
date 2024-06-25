@@ -119,7 +119,7 @@ class DEBUG(main.Solution):
 
     def SetLineThresholds(self):
         """设置直线识别相关阈值"""
-        self.ypath='y.json'
+        self.ypath='y.json'         # type:str
         main.detector.LineDetector.createTrackbar(self)        # 呼出trackbar
         cv2.namedWindow('img', cv2.WINDOW_NORMAL)
         cv2.setMouseCallback('img', self.mouse_action_Line)    # 设置鼠标事件回调函数
@@ -137,10 +137,10 @@ class DEBUG(main.Solution):
                 break
 
 if __name__ == '__main__':
-    debug = DEBUG()
+    debug = DEBUG(False)
     # region 阈值调试
-    debug.SetColorThresholds()
-    # debug.SetLineThresholds()
+    # debug.SetColorThresholds()
+    debug.SetLineThresholds()
     # endregion
 
     # region 功能测试
