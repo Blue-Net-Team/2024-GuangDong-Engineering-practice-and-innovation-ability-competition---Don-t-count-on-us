@@ -136,7 +136,6 @@ class Solution(detector.ColorDetector, detector.LineDetector):
         return 4, dx, dy
         
 
-
     def __call__(self):
         while True:
             data = self.ser.read()
