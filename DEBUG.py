@@ -51,6 +51,11 @@ class ReceiveImg(object):
 
 class DEBUG(main.Solution):
     def __init__(self, iftrans:bool=True, capid:int=0) -> None:
+        """ 
+        初始化
+        * iftrans: 是否使用图传
+        * capid: 摄像头ID，默认为0
+        """
         super().init_part1()
 
         self.r = 20
