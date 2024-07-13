@@ -1,7 +1,6 @@
 import json
 import cv2
 import numpy as np
-import serial
 
 
 class ColorDetector(object):
@@ -108,7 +107,7 @@ class ColorDetector(object):
         * img: 传入的二值化图像数据
         * 返回值：绘制矩形框后的图像数据，矩形框的坐标"""
         lst = []
-        for cnt in ColorDetector._get_edge(img):										# 遍历轮廓数据
+        for cnt in ColorDetector.__get_edge(img):										# 遍历轮廓数据
             x, y, w, h = cv2.boundingRect(cnt)						# 获取矩形框的坐标和宽高
 
             if (self.minarea > w*h or w*h > self.maxarea):
@@ -124,7 +123,7 @@ class ColorDetector(object):
         * img: 传入的二值化图像数据
         * 返回值：绘制圆形后的图像数据，圆形的坐标(圆心，半径),如果没有识别到圆形，图像不会绘制圆形，并且返回空列表"""
         lst = []
-        for cnt in ColorDetector._get_edge(img):										# 遍历轮廓数据
+        for cnt in ColorDetector.__get_edge(img):										# 遍历轮廓数据
             (x, y), radius = cv2.minEnclosingCircle(cnt)        # 获取最小外接圆的圆心坐标和半径
             center = (int(x), int(y))
             radius = int(radius)
@@ -138,7 +137,7 @@ class ColorDetector(object):
         return img, lst
     
     @staticmethod
-    def _get_edge(img:cv2.typing.MatLike):
+    def __get_edge(img:cv2.typing.MatLike):
         """静态函数获取边缘
         * img: 传入的图像数据
         返回值：边缘图像"""
