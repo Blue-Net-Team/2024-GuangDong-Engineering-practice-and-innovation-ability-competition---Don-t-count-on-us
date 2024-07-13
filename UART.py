@@ -4,7 +4,7 @@ import struct
 
 
 class UART(serial.Serial):
-    """串口类
+    """串口类，串口号: /dev/ttyAMA0, 波特率: 9600
     ====
     继承了pyserial库的串口类，封装了
     * send_pack_int: 发送整形的包头包尾修饰器
@@ -58,8 +58,9 @@ class UART(serial.Serial):
         """发送字符串数据,包含包头包尾"""
         return super().write(data.encode('ascii'))
     
-    def read(self, head=b'@', tail=b'#') -> str|None:
+    def read(self, ifdecode=True, head=b'@', tail=b'#'):
         """读取字符串数据,包头包尾只能是一个字节
+        * ifdecode: 是否用ascii码解码数据包
         * head: 包头
         * tail: 包尾
         返回读取到的已解码数据"""
@@ -76,7 +77,10 @@ class UART(serial.Serial):
             if byte == PACKET_TAIL:
                 break
             data += byte
-        res = data.decode('ascii')
+        if ifdecode:
+            res = data.decode('ascii')
+        else:
+            res = data
         return res if res else None
     
     def __del__(self) -> None:
