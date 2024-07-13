@@ -4,6 +4,15 @@ import struct
 
 
 class UART(serial.Serial):
+    """串口类
+    ====
+    继承了pyserial库的串口类，封装了
+    * send_pack_int: 发送整形的包头包尾修饰器
+    * send_pack_str: 发送字符串的包头包尾修饰器
+    * send_arr: 发送整形数组数组
+    * send: 发送整形数据
+    * write: 发送字符串数据
+    * read: 读取字符串数据"""
     def __init__(self):
         super().__init__('/dev/ttyAMA0', 9600)
 
@@ -33,23 +42,27 @@ class UART(serial.Serial):
     
     @send_pack_int
     def send_arr(self, args:Iterable):
-        """发送数组"""
+        """发送数组,包含包头包尾数据"""
         for i in args:
             data = struct.pack('>i', i)     # 发送四个字节，端小字节序
             super().write(data)
-        print()
 
     @send_pack_int
     def send(self, data:int):
-        """发送整型数据"""
+        """发送整型数据,包含包头包尾"""
         newdata = struct.pack('>i', data)
         super().write(newdata)
     
     @send_pack_str
     def write(self, data:str) -> int | None:
+        """发送字符串数据,包含包头包尾"""
         return super().write(data.encode('ascii'))
     
     def read(self, head=b'@', tail=b'#') -> str|None:
+        """读取字符串数据,包头包尾只能是一个字节
+        * head: 包头
+        * tail: 包尾
+        返回读取到的已解码数据"""
         PACKET_HEAD = head
         PACKET_TAIL = tail
 
