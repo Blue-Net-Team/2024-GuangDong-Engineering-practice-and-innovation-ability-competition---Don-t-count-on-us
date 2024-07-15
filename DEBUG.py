@@ -97,7 +97,7 @@ class DEBUG(main.Solution):
 
     def SetColorThresholds(self):
         """
-        颜色识别的阈值调试和色环定位位置大小调试
+        颜色识别的阈值调试
         """
         self.createTrackbar_color_and_circle()        # 呼出trackbar
         cv2.namedWindow('img', cv2.WINDOW_NORMAL)
@@ -109,10 +109,13 @@ class DEBUG(main.Solution):
             # 画出色环应该在的位置和大小
             img1 = self.img.copy()
             cv2.circle(img1, self.circle_point, self.circle_r, (0, 255, 0), 2)
-            mask = self.filter(self.img)
+            mask = self.filter(self.img)        # 二值化的图像
+            if mask is None: continue
+            mask1, p_list = self.draw_cycle(mask)        # 画出圆形的图像
 
             # self.img:原始图像
             # img1:对img深拷贝然后再画圈的图像
+            cv2.circle(img1, p_list[0][0], p_list[0][1], (255,0,255), 2)        # type:ignore
             cv2.imshow('img', img1)
 
             if mask is None: continue
@@ -141,6 +144,21 @@ class DEBUG(main.Solution):
             if cv2.waitKey(1) == 27:        # 按下ESC键退出
                 break
 
+    def SetCircleThresholds(self):
+        """设置色环定位相关阈值"""
+        main.detector.CircleDetector.createTrackbar(self)        # 呼出trackbar
+        while True:
+            _, self.img = self.reveiver.read()
+            if self.img is None:continue        # 如果没有读取到图像数据，继续循环
+
+            img, circles = self.get_circle(self.img)
+
+            cv2.imshow('img', img)
+            cv2.imshow('origin img', self.img)
+            if cv2.waitKey(1) == 27:        # 按下ESC键退出
+                break
+
+            
 if __name__ == '__main__':
     debug = DEBUG(False)
     # region 阈值调试

@@ -96,10 +96,7 @@ class ColorDetector(object):
         mask = cv2.inRange(hsv, low, high)						# 通过阈值过滤图像，将在阈值范围内的像素点设置为255，不在阈值范围内的像素点设置为0
         # XXX: kernel的大小可能需要调整
         kernel = np.ones((5, 5), np.uint8)						# 创建一个5*5的矩阵，矩阵元素全为1
-        # 对opencal进行膨胀
-        res = cv2.dilate(mask, kernel, iterations=_iterations)
-        # 对res进行腐蚀
-        res = cv2.erode(res, kernel, iterations=_iterations)
+        res = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=_iterations)
         return res
 
     def draw_rectangle(self, img:cv2.typing.MatLike): 
@@ -118,7 +115,7 @@ class ColorDetector(object):
             lst.append((x, y, x + w, y + h))
         return img, lst
     
-    def draw_cyclic(self, img:cv2.typing.MatLike) -> tuple[cv2.typing.MatLike, list[tuple[int, int]]]:
+    def draw_cycle(self, img:cv2.typing.MatLike) -> tuple[cv2.typing.MatLike, list[tuple[int, int]]]:
         """在图像上绘制圆形
         * img: 传入的二值化图像数据
         * 返回值：绘制圆形后的图像数据，圆形的坐标(圆心，半径),如果没有识别到圆形，图像不会绘制圆形，并且返回空列表"""
@@ -130,6 +127,7 @@ class ColorDetector(object):
             area = cv2.contourArea(cnt)
             if (self.minarea > area or area > self.maxarea):
                 continue
+            # XXX:排除小圆的半径可能要修改
             if radius < 10:     # 排除小圆
                 continue
             cv2.circle(img, center, radius, (0, 255, 0), 2)
@@ -217,8 +215,11 @@ class LineDetector(object):
         if ifdebug: cv2.imshow('edges', edges)
         # 获取直线
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200)
-        with open(ypath, 'r') as f:
-            y0 = json.load(f)['y']
+        try:
+            with open(ypath, 'r') as f:
+                y0 = json.load(f)['y']
+        except FileNotFoundError:
+            y0 = 0
 
         if lines is not None:       # 如果检测到直线
             for line in lines:
@@ -228,6 +229,56 @@ class LineDetector(object):
                 # 返回长度减去基准点的结果
                 return length - y0
         
+
+class CircleDetector(object):
+    """
+    圆形识别器
+    ----
+    通过霍夫圆环检测算法检测圆环
+    """
+    def __init__(self) -> None:
+        self.totalizer = 0
+        self.maxval = 255
+        self.mindist = 100
+
+    def createTrackbar(self,_id:int=0) -> None:
+        cv2.namedWindow(f'Circle trackbar{_id}', cv2.WINDOW_NORMAL)
+        cv2.createTrackbar('minval', f'Circle trackbar{_id}', self.totalizer, 255, self.minval_callback)
+        cv2.createTrackbar('maxval', f'Circle trackbar{_id}', self.maxval, 255, self.maxval_callback)
+        cv2.createTrackbar('mindist', f'Circle trackbar{_id}', self.mindist, 200, self.mindist_callback)
+
+    #region trackbar回调函数
+    def minval_callback(self, x):
+        self.minval = x
+
+    def maxval_callback(self, x):
+        self.maxval = x
+
+    def mindist_callback(self, x):
+        self.mindist = x
+    #endregion
+        
+    def get_circle(self, img0:cv2.typing.MatLike):
+        """
+        获取圆环
+        ----
+        * img0: 传入的图像数据
+        * 返回值：绘制圆环后的图像数据，圆环的坐标(圆心，半径)的二维数组
+        """
+        img = img0.copy()       # 深拷贝
+        cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)       # 转换为灰度图
+        circeles = cv2.HoughCircles(img,
+                                   cv2.HOUGH_GRADIENT,
+                                   1,
+                                   self.mindist,
+                                   param1=self.maxval,
+                                   param2=self.totalizer,
+                                   minRadius=0,
+                                   maxRadius=0)
+        for circle in circeles[0]:
+            x, y, r = circle
+            cv2.circle(img, (x, y), r, (255, 0, 255), 2)        # 画圆
+        return img, circeles[0]
 
 if __name__ == '__main__':
     #TODO: 测试代码

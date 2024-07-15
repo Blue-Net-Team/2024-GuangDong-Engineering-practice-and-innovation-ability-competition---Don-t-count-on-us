@@ -48,7 +48,7 @@ COLOR_dict_reverse = {
 }
 
 
-class Solution(detector.ColorDetector, detector.LineDetector):
+class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDetector):
     def __init__(self):
         self.init_part1()
         # 创建串口对象，self.ser继承了二维码识别的功能
@@ -88,7 +88,7 @@ class Solution(detector.ColorDetector, detector.LineDetector):
         if self.img is None:return False
         mask = self.filter(self.img)                                 # 过滤
         if mask is None:return False
-        img, p = self.draw_cyclic(mask)
+        img, p = self.draw_cycle(mask)
         if not p:return False
         return True
     
@@ -128,7 +128,7 @@ class Solution(detector.ColorDetector, detector.LineDetector):
         self.set_threshold(thresholds[_colorindex])       # 设置阈值
         mask = self.filter(self.img)
         if mask is None:return None
-        res, p = self.draw_cyclic(mask)
+        res, p = self.draw_cycle(mask)
 
         if not p: return None
 
