@@ -237,18 +237,22 @@ class CircleDetector(object):
     通过霍夫圆环检测算法检测圆环
     """
     def __init__(self) -> None:
-        self.totalizer = 0
-        self.maxval = 255
+        self.totalizer = 100
+        self.maxval = 20
         self.mindist = 100
+        self.minR = 0
+        self.maxR = 400
 
     def createTrackbar(self,_id:int=0) -> None:
         cv2.namedWindow(f'Circle trackbar{_id}', cv2.WINDOW_NORMAL)
-        cv2.createTrackbar('minval', f'Circle trackbar{_id}', self.totalizer, 255, self.minval_callback)
-        cv2.createTrackbar('maxval', f'Circle trackbar{_id}', self.maxval, 255, self.maxval_callback)
+        cv2.createTrackbar('totalizer', f'Circle trackbar{_id}', self.totalizer, 255, self.totalizer_callback)
+        cv2.createTrackbar('maxval', f'Circle trackbar{_id}', self.maxval, 70, self.maxval_callback)
         cv2.createTrackbar('mindist', f'Circle trackbar{_id}', self.mindist, 200, self.mindist_callback)
+        cv2.createTrackbar('minR', f'Circle trackbar{_id}', self.minR, 1000, self.minR_callback)
+        cv2.createTrackbar('maxR', f'Circle trackbar{_id}', self.maxR, 1000, self.maxR_callback)
 
     #region trackbar回调函数
-    def minval_callback(self, x):
+    def totalizer_callback(self, x):
         self.minval = x
 
     def maxval_callback(self, x):
@@ -256,6 +260,12 @@ class CircleDetector(object):
 
     def mindist_callback(self, x):
         self.mindist = x
+
+    def minR_callback(self, x):
+        self.minR = x
+
+    def maxR_callback(self, x):
+        self.maxR = x
     #endregion
         
     def get_circle(self, img0:cv2.typing.MatLike):
@@ -266,7 +276,9 @@ class CircleDetector(object):
         * 返回值：绘制圆环后的图像数据，圆环的坐标(圆心，半径)的二维数组
         """
         img = img0.copy()       # 深拷贝
-        cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)       # 转换为灰度图
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)       # 转换为灰度图
+        if self.totalizer == 0 or self.maxval == 0 or self.mindist == 0:
+            return img, [[]]
         circeles = cv2.HoughCircles(img,
                                    cv2.HOUGH_GRADIENT,
                                    1,
@@ -275,8 +287,11 @@ class CircleDetector(object):
                                    param2=self.totalizer,
                                    minRadius=0,
                                    maxRadius=0)
+        if circeles is None:
+            return img, [[]]
         for circle in circeles[0]:
             x, y, r = circle
+            x, y, r = int(x), int(y), int(r)
             cv2.circle(img, (x, y), r, (255, 0, 255), 2)        # 画圆
         return img, circeles[0]
 

@@ -64,6 +64,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         # 创建识别器对象
         detector.ColorDetector.__init__(self)
         detector.LineDetector.__init__(self)
+        detector.CircleDetector.__init__(self)
 
         # 颜色识别器面积初始化
         self.minarea = 0

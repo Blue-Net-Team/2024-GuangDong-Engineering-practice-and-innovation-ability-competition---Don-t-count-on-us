@@ -62,7 +62,7 @@ class DEBUG(main.Solution):
 
         if iftrans:
             # 图传
-            self.reveiver = ReceiveImg('10.0.0.3', 8000)
+            self.reveiver = ReceiveImg('192.168.137.103', 8000)
         else:
             self.reveiver = cv2.VideoCapture(capid)
 
@@ -153,6 +153,7 @@ class DEBUG(main.Solution):
 
             img, circles = self.get_circle(self.img)
 
+            print(circles)
             cv2.imshow('img', img)
             cv2.imshow('origin img', self.img)
             if cv2.waitKey(1) == 27:        # 按下ESC键退出
@@ -160,10 +161,11 @@ class DEBUG(main.Solution):
 
             
 if __name__ == '__main__':
-    debug = DEBUG(False)
+    debug = DEBUG(True)
     # region 阈值调试
     # debug.SetColorThresholds()
-    debug.SetLineThresholds()
+    # debug.SetLineThresholds()
+    debug.SetCircleThresholds()
     # endregion
 
     # region 功能测试
