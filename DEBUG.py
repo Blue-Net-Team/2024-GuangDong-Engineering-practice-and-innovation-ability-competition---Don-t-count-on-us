@@ -9,7 +9,7 @@ import main
 #TODO: 完善阈值表, 0红 1绿 2蓝
 thresholds = [
     #[low_h, low_s, low_v], [high_h, high_s, high_v]
-    ([0, 0, 0], [0, 0, 0]),
+    ([0, 109, 23], [42, 255, 255]),
     ([0, 0, 0], [0, 0, 0]),
     ([0, 0, 0], [0, 0, 0]),
 ]
@@ -116,11 +116,19 @@ class DEBUG(main.Solution):
 
             # self.img:原始图像
             # img1:对img深拷贝然后再画圈的图像
-            cv2.circle(img1, p_list[0][0], p_list[0][1], (255,0,255), 2)        # type:ignore
+            try:
+                # cv2.circle(img1, p_list[0][0], p_list[0][1], (255,0,255), 2)        # type:ignore
+                for i in p_list:
+                    cv2.circle(img1, i[0], i[1], (255,0,255), 2)
+            except:
+                pass
+            if len(p_list) == 1:
+                print(p_list)
             cv2.imshow('img', img1)
 
             if mask is None: continue
             cv2.imshow('mask', mask)
+            # cv2.imshow('mask1', mask1)
 
             if cv2.waitKey(1) == 27:        # 按下ESC键退出
                 break
@@ -135,52 +143,21 @@ class DEBUG(main.Solution):
         while True:
             _, self.img = self.reveiver.read()
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
-
-            angle = self.get_angle(self.img, True)
+            img1 = self.img.copy()
+            img1, angle = self.get_angle(self.img, True)
             distance = self.get_distance(self.img, self.ypath, True)
 
             print(f'angle:{angle}, distance:{distance}')
-            cv2.imshow('img', self.img)
+            cv2.imshow('img', img1)             # type:ignore
 
             if cv2.waitKey(1) == 27:        # 按下ESC键退出
                 break
 
-    def SetCircleThresholds(self):
-        """设置色环定位相关阈值"""
-        main.detector.CircleDetector.createTrackbar(self)        # 呼出trackbar
-        while True:
-            _, self.img = self.reveiver.read()
-            if self.img is None:continue        # 如果没有读取到图像数据，继续循环
-
-            img, circles = self.get_circle(self.img)
-
-            print(circles)
-            cv2.imshow('img', img)
-            cv2.imshow('origin img', self.img)
-            if cv2.waitKey(1) == 27:        # 按下ESC键退出
-                break
-
-            
 if __name__ == '__main__':
     debug = DEBUG(True)
     # region 阈值调试
     # debug.SetColorThresholds()
-    # debug.SetLineThresholds()
-    debug.SetCircleThresholds()
+    debug.SetLineThresholds()
+    # debug.SetCircleThresholds()
     # endregion
 
-    # region 功能测试
-    """ while True:
-        _, debug.img = debug.reveiver.read()
-        if debug.img is None:continue        # 如果没有读取到图像数据，继续循环
-        # res = debug.CORRECTION_angle()            # 角度校准
-        # res = debug.CORRECTION_distance()       # 直线识别
-        # res = debug.DETECTCOLOR()         # 颜色识别
-        res = debug.LOCATECOLOR(0)          # 色环定位
-
-        if res is not None:
-            print(res)
-        cv2.imshow('img', debug.img)
-        if cv2.waitKey(1) == 27:        # 按下ESC键退出
-            break """
-    # endregion

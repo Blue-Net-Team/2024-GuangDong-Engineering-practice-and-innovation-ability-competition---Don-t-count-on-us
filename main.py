@@ -93,11 +93,26 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         if not p:return False
         return True
     
+    def detect_clolr_plus(self, _colorindex:int) -> bool:
+        """
+         初步识别颜色之后判断物料是否在夹爪内
+        """
+        self.set_threshold(thresholds[_colorindex])       # 设置阈值
+        if self.img is None:return False
+        mask = self.filter(self.img)                                 # 过滤
+        if mask is None:return False
+        img, p = self.draw_cycle(mask)
+        if not p:return False
+        if circle_intersection_area(p[0][0], p[0][1], p[1], 
+                                    self.circle_point[0], self.circle_point[1], self.circle_r)/math.pi*self.circle_r**2 > 0.8:
+            return True
+        return False
+    
     
     def CORRECTION_angle(self) -> tuple[int, int]|None:
         """校准小车与直线的角度
         * return: 识别到的角度,如果没有识别到直线返回None"""
-        angle = self.get_angle(self.img)
+        _, angle = self.get_angle(self.img)
         if angle is not None:
             angle = int(angle)
             if abs(angle-90) > 0:
@@ -117,7 +132,8 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         """
         for i in range(3):
             if self.detect_color(i):
-                return 3, i
+                if self.detect_clolr_plus(i):
+                    return 3, i
 
 
     def LOCATECOLOR(self, _colorindex:int):
@@ -129,11 +145,11 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         self.set_threshold(thresholds[_colorindex])       # 设置阈值
         mask = self.filter(self.img)
         if mask is None:return None
-        res, p = self.draw_cycle(mask)
+        res, circles = self.draw_cycle(mask)
 
-        if not p: return None
+        if not circles: return None
 
-        dx, dy = p[0][0] - self.circle_point[0], p[0][1] - self.circle_point[1]
+        dx, dy = circles[0][0] - self.circle_point[0], circles[0][1] - self.circle_point[1]
         return 4, dx, dy
         
 

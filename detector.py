@@ -20,7 +20,7 @@ class ColorDetector(object):
         self.high_v = 255
 
         self.minarea = 0
-        self.maxarea = 100000 # 220800
+        self.maxarea = 4500
         # endregion
 
     def set_threshold(self, _threshold:tuple[list[int], list[int]]) -> None:
@@ -45,8 +45,8 @@ class ColorDetector(object):
         cv2.createTrackbar('high_s', f'Color and circle trackbar{_id}', self.high_s, 255, self.call_back_high_s)
         cv2.createTrackbar('low_v', f'Color and circle trackbar{_id}', self.low_v, 255, self.call_back_low_v)
         cv2.createTrackbar('high_v', f'Color and circle trackbar{_id}', self.high_v, 255, self.call_back_high_v)
-        cv2.createTrackbar('minarea', f'Color and circle trackbar{_id}', self.minarea, 100000, self.call_back_minarea)
-        cv2.createTrackbar('maxarea', f'Color and circle trackbar{_id}', self.maxarea, 100000, self.call_back_maxarea)
+        cv2.createTrackbar('minarea', f'Color and circle trackbar{_id}', self.minarea, 4500, self.call_back_minarea)
+        cv2.createTrackbar('maxarea', f'Color and circle trackbar{_id}', self.maxarea, 4500, self.call_back_maxarea)
         # endregion
         pass
 
@@ -127,10 +127,7 @@ class ColorDetector(object):
             area = cv2.contourArea(cnt)
             if (self.minarea > area or area > self.maxarea):
                 continue
-            # XXX:排除小圆的半径可能要修改
-            if radius < 10:     # 排除小圆
-                continue
-            cv2.circle(img, center, radius, (0, 255, 0), 2)
+            # cv2.circle(img, center, radius, (0, 255, 0), 2)
             lst.append((center, radius))
         return img, lst
     
@@ -168,18 +165,18 @@ class LineDetector(object):
         self.maxval = x
     # endregion
 
-    def get_angle(self, _img0:cv2.typing.MatLike|None, ifdubug:bool=False) -> float|None:
+    def get_angle(self, _img0:cv2.typing.MatLike|None, ifdubug:bool=False):
         """获取直线的角度
         * img: 传入的图像数据
         * ifdubug: 是否调试"""
-        if _img0 is None:return None
+        if _img0 is None:return None, None
         _img1 = _img0.copy()
         # 转换为灰度图
         gray = cv2.cvtColor(_img1, cv2.COLOR_BGR2GRAY)
         # 使用Canny算法进行边缘检测
         edges = cv2.Canny(gray, self.minval, self.maxval, apertureSize=3)
         # 闭运算
-        edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (5, 5))        # type:ignore
+        edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (5, 5), iterations=3)        # type:ignore
         # 膨胀
         edges = cv2.dilate(edges, (5, 5))                               # type:ignore
         if ifdubug: cv2.imshow('edges', edges)
@@ -197,9 +194,9 @@ class LineDetector(object):
                 angle = np.arctan(slope) * 180 / np.pi
                 # 将识别的线画出来
                 cv2.line(_img1, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                return angle
+                return _img1, angle
 
-        return None
+        return _img1, None
     
     def get_distance(self, img0:cv2.typing.MatLike|None, ypath:str='y.json', ifdebug:bool=False) -> int|None:
         """获取直线的距离
@@ -211,7 +208,7 @@ class LineDetector(object):
         gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, self.minval, self.maxval, apertureSize=3)
         # 闭运算
-        edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (5, 5))        # type:ignore
+        edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (5, 5), iterations=3)        # type:ignore
         if ifdebug: cv2.imshow('edges', edges)
         # 获取直线
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200)
@@ -237,6 +234,7 @@ class CircleDetector(object):
     通过霍夫圆环检测算法检测圆环
     """
     def __init__(self) -> None:
+        # TODO: 修改相关参数
         self.totalizer = 100
         self.maxval = 20
         self.mindist = 100
@@ -278,8 +276,8 @@ class CircleDetector(object):
         img = img0.copy()       # 深拷贝
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)       # 转换为灰度图
         if self.totalizer == 0 or self.maxval == 0 or self.mindist == 0:
-            return img, [[]]
-        circeles = cv2.HoughCircles(img,
+            return img, np.array([[]])
+        circles = cv2.HoughCircles(img,
                                    cv2.HOUGH_GRADIENT,
                                    1,
                                    self.mindist,
@@ -287,13 +285,13 @@ class CircleDetector(object):
                                    param2=self.totalizer,
                                    minRadius=0,
                                    maxRadius=0)
-        if circeles is None:
-            return img, [[]]
-        for circle in circeles[0]:
+        if circles is None:
+            return img, np.array([[]])
+        for circle in circles[0]:
             x, y, r = circle
             x, y, r = int(x), int(y), int(r)
-            cv2.circle(img, (x, y), r, (255, 0, 255), 2)        # 画圆
-        return img, circeles[0]
+            cv2.circle(img0, (x, y), r, (255, 0, 255), 2)        # 画圆
+        return img, circles[0]
 
 if __name__ == '__main__':
     #TODO: 测试代码
