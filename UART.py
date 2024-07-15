@@ -44,7 +44,9 @@ class UART(serial.Serial):
     def send_arr(self, args:Iterable):
         """发送数组,包含包头包尾数据"""
         for i in args:
-            data = struct.pack('>i', i)     # 发送四个字节，端小字节序
+            data = i
+            if isinstance(i, int):
+                data = struct.pack('>i', i)     # 发送四个字节，端小字节序
             super().write(data)
 
     @send_pack_int
