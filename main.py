@@ -82,6 +82,13 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         self.ser = UART()
         self.cap = cv2.VideoCapture(0)
 
+        try:
+            with open('radius.json', 'r') as f:
+                data = json.load(f)
+                self.minR = data['minR']
+                self.maxR = data['maxR']
+        except:
+            pass
 
     def init_part1(self):
 
