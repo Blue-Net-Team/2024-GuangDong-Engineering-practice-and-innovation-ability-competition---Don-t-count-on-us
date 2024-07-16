@@ -179,6 +179,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             data = self.ser.read()
             if not data: continue
             self.img = self.cap.read()[1]
+            self.img = self.img[:300, :]
 
             if data == 'A':
                 data = self.CORRECTION_angle()

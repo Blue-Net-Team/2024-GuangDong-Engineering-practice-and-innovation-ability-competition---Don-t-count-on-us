@@ -170,11 +170,12 @@ class DEBUG(main.Solution):
         颜色识别的阈值调试
         """
         self.__createTrackbar_color_and_circle()        # 呼出trackbar
-        cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('img', cv2.WINDOW_AUTOSIZE)
         cv2.setMouseCallback('img', self.mouse_action_circlePoint)    # 设置鼠标事件回调函数
         while True:
             _, self.img = self.reveiver.read()
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
+            self.img = self.img[:300, :]
 
             # 画出色环应该在的位置和大小
             img1 = self.img.copy()
@@ -223,10 +224,10 @@ class DEBUG(main.Solution):
                 break
 
 if __name__ == '__main__':
-    debug = DEBUG(False)
+    debug = DEBUG(True)
     # region 阈值调试
-    # debug.SetColorThresholds()
-    debug.SetLineThresholds()
+    debug.SetColorThresholds()
+    # debug.SetLineThresholds()
     # debug.SetCircleThresholds()
     # endregion
 
