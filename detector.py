@@ -19,8 +19,8 @@ class ColorDetector(object):
         self.high_s = 255
         self.high_v = 255
 
-        self.minarea = 0
-        self.maxarea = 4500
+        self.minR = 0
+        self.maxR = 4500
         # endregion
 
     def set_threshold(self, _threshold:tuple[list[int], list[int]]) -> None:
@@ -45,8 +45,8 @@ class ColorDetector(object):
         cv2.createTrackbar('high_s', f'Color and circle trackbar{_id}', self.high_s, 255, self.call_back_high_s)
         cv2.createTrackbar('low_v', f'Color and circle trackbar{_id}', self.low_v, 255, self.call_back_low_v)
         cv2.createTrackbar('high_v', f'Color and circle trackbar{_id}', self.high_v, 255, self.call_back_high_v)
-        cv2.createTrackbar('minarea', f'Color and circle trackbar{_id}', self.minarea, 4500, self.call_back_minarea)
-        cv2.createTrackbar('maxarea', f'Color and circle trackbar{_id}', self.maxarea, 4500, self.call_back_maxarea)
+        cv2.createTrackbar('minR', f'Color and circle trackbar{_id}', self.minR, 100, self.call_back_minarea)
+        cv2.createTrackbar('maxR', f'Color and circle trackbar{_id}', self.maxR, 100, self.call_back_maxarea)
         # endregion
         pass
 
@@ -73,10 +73,10 @@ class ColorDetector(object):
         self.high_v = high_v
 
     def call_back_minarea(self, minarea):
-        self.minarea = minarea
+        self.minR = minarea
 
     def call_back_maxarea(self, maxarea):
-        self.maxarea = maxarea
+        self.maxR = maxarea
     # endregion
 
     def filter(self, img:cv2.typing.MatLike|None, _iterations:int=1):
@@ -107,7 +107,7 @@ class ColorDetector(object):
         for cnt in ColorDetector.__get_edge(img):										# 遍历轮廓数据
             x, y, w, h = cv2.boundingRect(cnt)						# 获取矩形框的坐标和宽高
 
-            if (self.minarea > w*h or w*h > self.maxarea):
+            if (self.minR > w*h or w*h > self.maxR):
                 continue
             if h/w > 1.5:
                 continue
@@ -125,7 +125,7 @@ class ColorDetector(object):
             center = (int(x), int(y))
             radius = int(radius)
             area = cv2.contourArea(cnt)
-            if (self.minarea > area or area > self.maxarea):
+            if (radius < self.minR or radius > self.maxR):
                 continue
             # cv2.circle(img, center, radius, (0, 255, 0), 2)
             lst.append((center, radius))
