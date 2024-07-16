@@ -22,6 +22,7 @@ r"""
 			佛祖保佑       工创省一
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 """
+import json
 import math
 from typing import Iterable
 from UART import UART
@@ -29,13 +30,6 @@ import detector
 import cv2
 
 
-#TODO: 完善阈值表, 0红 1绿 2蓝
-thresholds = [
-    #[low_h, low_s, low_v], [high_h, high_s, high_v]
-    ([0, 0, 0], [0, 0, 0]),
-    ([0, 0, 0], [0, 0, 0]),
-    ([0, 0, 0], [0, 0, 0]),
-]
 COLOR_dict = {
     0:'R',
     1:'G',
@@ -47,6 +41,39 @@ COLOR_dict_reverse = {
     'B':2
 }
 
+thresholds = [
+    #[low_h, low_s, low_v], [high_h, high_s, high_v]
+    ([0, 0, 0], [0, 0, 0]),
+    ([0, 0, 0], [0, 0, 0]),
+    ([0, 0, 0], [0, 0, 0]),
+]
+# 读取阈值
+for i in range(3):
+    try:
+        with open(f'{COLOR_dict[i]}.json', 'r') as f:
+            thresholds[i] = json.load(f)
+    except:
+        pass
+    
+CIRCLE_POINT = (100, 100)
+CIRCLE_R = 50
+try:        # 读取圆心和半径
+    with open('circle.json', 'r') as f:
+        data = json.load(f)
+        CIRCLE_POINT = tuple(data['point'])
+        CIRCLE_R = data['r']
+except:
+    pass
+
+MINVAL = 0
+MAXVAL = 255
+try:        # 读取直线的基准y坐标
+    with open('y.json', 'r') as f:
+        data = json.load(f)
+        MINVAL = data['minval']
+        MAXVAL = data['maxval']
+except:
+    pass
 
 class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDetector):
     def __init__(self):
@@ -57,18 +84,12 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
 
 
     def init_part1(self):
-        # TODO:测试夹爪的圆心坐标,半径
-        self.circle_point = (100, 100)
-        self.circle_r = 50
 
         # 创建识别器对象
         detector.ColorDetector.__init__(self)
         detector.LineDetector.__init__(self)
         detector.CircleDetector.__init__(self)
-
-        # 颜色识别器面积初始化
-        self.minarea = 0
-        self.maxarea = 100000
+        detector.LineDetector.set_threshold(self, (MINVAL, MAXVAL))
 
         self.mask = None
 
@@ -104,7 +125,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         img, p = self.draw_cycle(mask)
         if not p:return False
         if circle_intersection_area(p[0][0], p[0][1], p[1], 
-                                    self.circle_point[0], self.circle_point[1], self.circle_r)/math.pi*self.circle_r**2 > 0.8:
+                                    CIRCLE_POINT[0], CIRCLE_POINT[1], CIRCLE_R)/math.pi*CIRCLE_R**2 > 0.8:
             return True
         return False
     
@@ -149,7 +170,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
 
         if not circles: return None
 
-        dx, dy = circles[0][0] - self.circle_point[0], circles[0][1] - self.circle_point[1]
+        dx, dy = circles[0][0] - CIRCLE_POINT[0], circles[0][1] - CIRCLE_POINT[1]
         return 4, dx, dy
         
 

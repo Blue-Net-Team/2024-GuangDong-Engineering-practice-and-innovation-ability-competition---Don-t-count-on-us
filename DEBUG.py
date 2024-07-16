@@ -64,7 +64,34 @@ class DEBUG(main.Solution):
         """
         super().init_part1()
 
+        self.circle_point = (100, 100)
         self.r = 20
+
+        try:
+            with open('circle.json', 'r') as f:
+                data = json.load(f)
+                self.circle_point = tuple(data['point'])
+                self.r = data['r']
+        except:
+            pass
+
+        self.y = 0
+
+        try:
+            with open('y.json', 'r') as f:
+                data = json.load(f)
+                self.y = data['y']
+        except:
+            pass
+
+        try:
+            with open('line.json', 'r') as f:
+                data = json.load(f)
+                self.minval = data['minval']
+                self.maxval = data['maxval']
+        except:
+            pass
+
         self.color = 0  # 0红 1绿 2蓝
 
         if iftrans:
@@ -98,12 +125,14 @@ class DEBUG(main.Solution):
 
     # region 回调函数
     def callback_circle(self, x):
-        self.circle_r = x
+        self.r = x
 
-    def callback_OK(self, x):
+    def callback_color_OK(self, x):
         if x == 1:      # 保存
             with open(f'{main.COLOR_dict[self.color]}.json', 'w') as f:
                 json.dump(thresholds[self.color], f)
+            with open('circle.json', 'w') as f:
+                json.dump({'point':self.circle_point, 'r':self.r}, f)
             
     def callback_color(self, x):
         self.color = x
@@ -116,13 +145,25 @@ class DEBUG(main.Solution):
         cv2.setTrackbarPos('high_h', 'Color and circle trackbar0', thresholds[x][1][0])
         cv2.setTrackbarPos('high_s', 'Color and circle trackbar0', thresholds[x][1][1])
         cv2.setTrackbarPos('high_v', 'Color and circle trackbar0', thresholds[x][1][2])
+    
+    def callback_line_OK(self, x):
+        if x == 1:      # 保存
+            with open('line.json', 'w') as f:
+                json.dump({'minval':self.minval, 'maxval':self.maxval}, f)
+ 
+            with open('y.json', 'w') as f:
+                json.dump({'y':self.y}, f)
     # endregion
 
     def __createTrackbar_color_and_circle(self):
         main.detector.ColorDetector.createTrackbar(self)        # 呼出trackbar
         cv2.createTrackbar('RGB', 'Color and circle trackbar0', 0, 2, self.callback_color)
         cv2.createTrackbar('r', 'Color and circle trackbar0', self.r, 400, self.callback_circle)
-        cv2.createTrackbar('OK', 'Color and circle trackbar0', 0, 1, self.callback_OK)
+        cv2.createTrackbar('OK', 'Color and circle trackbar0', 0, 1, self.callback_color_OK)
+
+    def __createTrackbar_line(self):
+        main.detector.LineDetector.createTrackbar(self)
+        cv2.createTrackbar('OK', 'Line trackbar0', 0, 1, self.callback_line_OK)
 
     def SetColorThresholds(self):
         """
@@ -137,7 +178,7 @@ class DEBUG(main.Solution):
 
             # 画出色环应该在的位置和大小
             img1 = self.img.copy()
-            cv2.circle(img1, self.circle_point, self.circle_r, (0, 255, 0), 2)
+            cv2.circle(img1, self.circle_point, self.r, (0, 255, 0), 2)
             mask = self.filter(self.img)        # 二值化的图像
             if mask is None: continue
             mask1, p_list = self.draw_cycle(mask)        # 画出圆形的图像
@@ -165,7 +206,7 @@ class DEBUG(main.Solution):
     def SetLineThresholds(self):
         """设置直线识别相关阈值"""
         self.ypath='y.json'         # type:str
-        main.detector.LineDetector.createTrackbar(self)        # 呼出trackbar
+        self.__createTrackbar_line()        # 呼出trackbar
         cv2.namedWindow('img', cv2.WINDOW_NORMAL)
         cv2.setMouseCallback('img', self.mouse_action_Line)    # 设置鼠标事件回调函数
         while True:
@@ -173,7 +214,7 @@ class DEBUG(main.Solution):
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
             img1 = self.img.copy()
             img1, angle = self.get_angle(self.img, True)
-            distance = self.get_distance(self.img, self.ypath, True)
+            distance = self.get_distance(self.img, self.y, True)
 
             print(f'angle:{angle}, distance:{distance}')
             cv2.imshow('img', img1)             # type:ignore
@@ -184,8 +225,8 @@ class DEBUG(main.Solution):
 if __name__ == '__main__':
     debug = DEBUG(False)
     # region 阈值调试
-    debug.SetColorThresholds()
-    # debug.SetLineThresholds()
+    # debug.SetColorThresholds()
+    debug.SetLineThresholds()
     # debug.SetCircleThresholds()
     # endregion
 

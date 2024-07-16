@@ -152,6 +152,12 @@ class LineDetector(object):
         self.minval = 0
         self.maxval = 255
 
+    def set_threshold(self, _threshold:tuple[int, int]) -> None:
+        """设置直线识别的阈值
+        * _threshold: 传入的阈值"""
+        self.minval = _threshold[0]
+        self.maxval = _threshold[1]
+
     def createTrackbar(self,_id:int=0) -> None:
         cv2.namedWindow(f'Line trackbar{_id}', cv2.WINDOW_NORMAL)
         cv2.createTrackbar('minval', f'Line trackbar{_id}', self.minval, 255, self.minval_callback)
@@ -198,7 +204,7 @@ class LineDetector(object):
 
         return _img1, None
     
-    def get_distance(self, img0:cv2.typing.MatLike|None, ypath:str='y.json', ifdebug:bool=False) -> int|None:
+    def get_distance(self, img0:cv2.typing.MatLike|None, y0:int=0, ifdebug:bool=False) -> int|None:
         """获取直线的距离
         * img: 传入的图像数据
         * ypath: 基准点坐标保存的文件路径(json)
@@ -212,11 +218,6 @@ class LineDetector(object):
         if ifdebug: cv2.imshow('edges', edges)
         # 获取直线
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200)
-        try:
-            with open(ypath, 'r') as f:
-                y0 = json.load(f)['y']
-        except FileNotFoundError:
-            y0 = 0
 
         if lines is not None:       # 如果检测到直线
             for line in lines:
