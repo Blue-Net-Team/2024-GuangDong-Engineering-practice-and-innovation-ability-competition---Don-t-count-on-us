@@ -6,13 +6,19 @@ import numpy as np
 import main
 
 
-#TODO: 完善阈值表, 0红 1绿 2蓝
 thresholds = [
     #[low_h, low_s, low_v], [high_h, high_s, high_v]
-    ([0, 109, 23], [42, 255, 255]),
+    ([0, 0, 0], [0, 0, 0]),
     ([0, 0, 0], [0, 0, 0]),
     ([0, 0, 0], [0, 0, 0]),
 ]
+
+for i in range(3):
+    try:
+        with open(f'{main.COLOR_dict[i]}.json', 'r') as f:
+            thresholds[i] = json.load(f)
+    except:
+        pass
 
 class ReceiveImg(object):
     def __init__(self, host, port):
@@ -59,6 +65,7 @@ class DEBUG(main.Solution):
         super().init_part1()
 
         self.r = 20
+        self.color = 0  # 0红 1绿 2蓝
 
         if iftrans:
             # 图传
@@ -66,6 +73,8 @@ class DEBUG(main.Solution):
             self.reveiver = ReceiveImg('192.168.137.103', 8000)
         else:
             self.reveiver = cv2.VideoCapture(capid)
+
+        self.set_threshold(thresholds[self.color])
 
     # region 鼠标事件
     def mouse_action_circlePoint(self, event, x, y, flags, param):
@@ -91,16 +100,35 @@ class DEBUG(main.Solution):
     def callback_circle(self, x):
         self.circle_r = x
 
-    def createTrackbar_color_and_circle(self):
-        main.detector.ColorDetector.createTrackbar(self)        # 呼出trackbar
-        cv2.createTrackbar('r', 'Color and circle trackbar0', self.r, 400, self.callback_circle)
+    def callback_OK(self, x):
+        if x == 1:      # 保存
+            with open(f'{main.COLOR_dict[self.color]}.json', 'w') as f:
+                json.dump(thresholds[self.color], f)
+            
+    def callback_color(self, x):
+        self.color = x
+        self.set_threshold(thresholds[x])
+
+        # 更新trackbar
+        cv2.setTrackbarPos('low_h', 'Color and circle trackbar0', thresholds[x][0][0])
+        cv2.setTrackbarPos('low_s', 'Color and circle trackbar0', thresholds[x][0][1])
+        cv2.setTrackbarPos('low_v', 'Color and circle trackbar0', thresholds[x][0][2])
+        cv2.setTrackbarPos('high_h', 'Color and circle trackbar0', thresholds[x][1][0])
+        cv2.setTrackbarPos('high_s', 'Color and circle trackbar0', thresholds[x][1][1])
+        cv2.setTrackbarPos('high_v', 'Color and circle trackbar0', thresholds[x][1][2])
     # endregion
+
+    def __createTrackbar_color_and_circle(self):
+        main.detector.ColorDetector.createTrackbar(self)        # 呼出trackbar
+        cv2.createTrackbar('RGB', 'Color and circle trackbar0', 0, 2, self.callback_color)
+        cv2.createTrackbar('r', 'Color and circle trackbar0', self.r, 400, self.callback_circle)
+        cv2.createTrackbar('OK', 'Color and circle trackbar0', 0, 1, self.callback_OK)
 
     def SetColorThresholds(self):
         """
         颜色识别的阈值调试
         """
-        self.createTrackbar_color_and_circle()        # 呼出trackbar
+        self.__createTrackbar_color_and_circle()        # 呼出trackbar
         cv2.namedWindow('img', cv2.WINDOW_NORMAL)
         cv2.setMouseCallback('img', self.mouse_action_circlePoint)    # 设置鼠标事件回调函数
         while True:
@@ -154,10 +182,10 @@ class DEBUG(main.Solution):
                 break
 
 if __name__ == '__main__':
-    debug = DEBUG(True)
+    debug = DEBUG(False)
     # region 阈值调试
-    # debug.SetColorThresholds()
-    debug.SetLineThresholds()
+    debug.SetColorThresholds()
+    # debug.SetLineThresholds()
     # debug.SetCircleThresholds()
     # endregion
 
