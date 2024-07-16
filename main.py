@@ -111,8 +111,8 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         mask = self.filter(self.img)                                 # 过滤
         if mask is None:return False
         img, p = self.draw_cycle(mask)
-        if not p:return False
-        return True
+        if len(p) == 1:return True
+        return False
     
     def detect_clolr_plus(self, _colorindex:int) -> bool:
         """
@@ -149,7 +149,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
 
     def DETECTCOLOR(self):
         """
-        颜色识别, 识别到什么颜色就发送什么信号(1,2,3)
+        物料颜色识别, 识别到什么颜色就发送什么信号(1,2,3)
         """
         for i in range(3):
             if self.detect_color(i):
@@ -163,15 +163,32 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         ----
         * _colorindex: 颜色索引
         """
-        self.set_threshold(thresholds[_colorindex])       # 设置阈值
-        mask = self.filter(self.img)
-        if mask is None:return None
-        res, circles = self.draw_cycle(mask)
+        num = 0
+        while True:
+            p_average = [0, 0]
+            ps = []
+            self.set_threshold(thresholds[_colorindex])       # 设置阈值
+            mask = self.filter(self.img)
+            if mask is None:return None
+            img1 = self.img.copy()
+            img1 = cv2.bitwise_and(img1, img1, mask=mask)        # 与操作
+            mask1, p_list = self.get_circle(img1)        # 画出圆形的图像
 
-        if not circles: return None
+            if p_list.shape == (1,3):
+                # print(p_list)
+                ps.append((p_list[0][0], p_list[0][1]))
+                num += 1
+            if num % 10 == 0 and num != 0:
+                for i in ps:
+                    p_average[0] += i[0]
+                    p_average[1] += i[1]
+                p_average[0] = p_average[0] // 10
+                p_average[1] = p_average[1] // 10
+                p_average[0], p_average[1] = int(p_average[0]), int(p_average[1])
+                # print(p_average)
 
-        dx, dy = circles[0][0] - CIRCLE_POINT[0], circles[0][1] - CIRCLE_POINT[1]
-        return 4, dx, dy
+            dx, dy = p_average[0] - CIRCLE_POINT[0], p_average[1] - CIRCLE_POINT[1]
+            return 4, dx, dy
         
 
     def __call__(self):

@@ -66,7 +66,6 @@ class DEBUG(main.Solution):
 
         self.circle_point = (100, 100)
         self.r = 20
-
         try:
             with open('circle.json', 'r') as f:
                 data = json.load(f)
@@ -76,7 +75,6 @@ class DEBUG(main.Solution):
             pass
 
         self.y = 0
-
         try:
             with open('y.json', 'r') as f:
                 data = json.load(f)
@@ -89,6 +87,14 @@ class DEBUG(main.Solution):
                 data = json.load(f)
                 self.minval = data['minval']
                 self.maxval = data['maxval']
+        except:
+            pass
+
+        try:
+            with open('radius.json', 'r') as f:
+                data = json.load(f)
+                self.minR = data['minR']
+                self.maxR = data['maxR']
         except:
             pass
 
@@ -127,12 +133,39 @@ class DEBUG(main.Solution):
     def callback_circle(self, x):
         self.r = x
 
+    def call_back_low_h(self, low_h):
+        super().call_back_low_h(low_h)
+        thresholds[self.color][0][0] = low_h
+
+    def call_back_low_s(self, low_s):
+        super().call_back_low_s(low_s)
+        thresholds[self.color][0][1] = low_s
+
+    def call_back_low_v(self, low_v):
+        super().call_back_low_v(low_v)
+        thresholds[self.color][0][2] = low_v
+
+    def call_back_high_h(self, high_h):
+        super().call_back_high_h(high_h)
+        thresholds[self.color][1][0] = high_h
+
+    def call_back_high_s(self, high_s):
+        super().call_back_high_s(high_s)
+        thresholds[self.color][1][1] = high_s
+
+    def call_back_high_v(self, high_v):
+        super().call_back_high_v(high_v)
+        thresholds[self.color][1][2] = high_v
+
     def callback_color_OK(self, x):
         if x == 1:      # 保存
             with open(f'{main.COLOR_dict[self.color]}.json', 'w') as f:
                 json.dump(thresholds[self.color], f)
             with open('circle.json', 'w') as f:
                 json.dump({'point':self.circle_point, 'r':self.r}, f)
+
+            with open('radius.json', 'w') as f:
+                json.dump({'minR':self.minR, 'maxR':self.maxR}, f)
             
     def callback_color(self, x):
         self.color = x
@@ -160,14 +193,72 @@ class DEBUG(main.Solution):
         cv2.createTrackbar('RGB', 'Color and circle trackbar0', 0, 2, self.callback_color)
         cv2.createTrackbar('r', 'Color and circle trackbar0', self.r, 400, self.callback_circle)
         cv2.createTrackbar('OK', 'Color and circle trackbar0', 0, 1, self.callback_color_OK)
+        main.detector.CircleDetector.createTrackbar(self)
 
     def __createTrackbar_line(self):
         main.detector.LineDetector.createTrackbar(self)
         cv2.createTrackbar('OK', 'Line trackbar0', 0, 1, self.callback_line_OK)
 
+    def SetCircleThresholds(self):
+        """
+        色环颜色识别的阈值调试
+        """
+        self.__createTrackbar_color_and_circle()        # 呼出trackbar
+        cv2.namedWindow('img', cv2.WINDOW_AUTOSIZE)
+        cv2.setMouseCallback('img', self.mouse_action_circlePoint)    # 设置鼠标事件回调函数
+        num = 0
+        while True:
+            p_average = [0, 0]
+            ps = []
+            _, self.img = self.reveiver.read()
+            if self.img is None:continue        # 如果没有读取到图像数据，继续循环
+            self.img = self.img[:300, :]
+
+            # 画出色环应该在的位置和大小
+            img1 = self.img.copy()
+            img2 = self.img.copy()
+            cv2.circle(img2, self.circle_point, self.r, (0, 255, 0), 2)
+            mask = self.filter(self.img, 1, 0)        # 二值化的图像
+            if mask is None: continue
+            img1 = cv2.bitwise_and(img1, img1, mask=mask)        # 与操作
+            # 
+            mask1, p_list = self.get_circle(img1)        # 画出圆形的图像
+
+            # self.img:原始图像
+            # img1:对img深拷贝然后再画圈的图像
+            try:
+                # cv2.circle(img1, p_list[0][0], p_list[0][1], (255,0,255), 2)        # type:ignore
+                for i in p_list:
+                    cv2.circle(img2, i[0], i[1], (255,0,255), 2)
+            except:
+                pass
+            if p_list.shape == (1,3):
+                # print(p_list)
+                ps.append((p_list[0][0], p_list[0][1]))
+                num += 1
+            if num % 10 == 0 and num != 0:
+                for i in ps:
+                    p_average[0] += i[0]
+                    p_average[1] += i[1]
+                p_average[0] = p_average[0] // 10
+                p_average[1] = p_average[1] // 10
+                p_average[0], p_average[1] = int(p_average[0]), int(p_average[1])
+                print(p_average)
+                cv2.circle(img2, (p_average[0], p_average[1]), 2, (255, 255, 0), 2)
+                num = 0
+                ps = []
+            cv2.imshow('img', img2)
+
+            if mask is None: continue
+            cv2.imshow('mask', mask)
+            cv2.imshow('mask1', mask1)
+
+            if cv2.waitKey(1) == 27:        # 按下ESC键退出
+                break
+
     def SetColorThresholds(self):
         """
-        颜色识别的阈值调试
+        物料颜色识别的阈值调试
         """
         self.__createTrackbar_color_and_circle()        # 呼出trackbar
         cv2.namedWindow('img', cv2.WINDOW_AUTOSIZE)
@@ -176,33 +267,26 @@ class DEBUG(main.Solution):
             _, self.img = self.reveiver.read()
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
             self.img = self.img[:300, :]
+            # self.img = cv2.GaussianBlur(self.img, (5, 5), 10)
 
             # 画出色环应该在的位置和大小
             img1 = self.img.copy()
-            cv2.circle(img1, self.circle_point, self.r, (0, 255, 0), 2)
-            mask = self.filter(self.img)        # 二值化的图像
+            img2 = self.img.copy()
+            cv2.circle(img2, self.circle_point, self.r, (0, 255, 0), 2)
+            mask = self.filter(self.img, 1, 0)        # 二值化的图像
             if mask is None: continue
-            mask1, p_list = self.draw_cycle(mask)        # 画出圆形的图像
 
-            # self.img:原始图像
-            # img1:对img深拷贝然后再画圈的图像
-            try:
-                # cv2.circle(img1, p_list[0][0], p_list[0][1], (255,0,255), 2)        # type:ignore
-                for i in p_list:
-                    cv2.circle(img1, i[0], i[1], (255,0,255), 2)
-            except:
-                pass
+            res, p_list = self.draw_cycle(mask)
+            print(p_list)
             if len(p_list) == 1:
-                print(p_list)
-            cv2.imshow('img', img1)
+                cv2.circle(img2, p_list[0][0], p_list[0][1], (255, 0, 255), 2)
 
-            if mask is None: continue
+            cv2.imshow('img', img2)
             cv2.imshow('mask', mask)
-            # cv2.imshow('mask1', mask1)
 
             if cv2.waitKey(1) == 27:        # 按下ESC键退出
                 break
-        
+
 
     def SetLineThresholds(self):
         """设置直线识别相关阈值"""
@@ -226,8 +310,8 @@ class DEBUG(main.Solution):
 if __name__ == '__main__':
     debug = DEBUG(True)
     # region 阈值调试
-    debug.SetColorThresholds()
+    debug.SetCircleThresholds()
     # debug.SetLineThresholds()
-    # debug.SetCircleThresholds()
+    # debug.SetColorThresholds()
     # endregion
 

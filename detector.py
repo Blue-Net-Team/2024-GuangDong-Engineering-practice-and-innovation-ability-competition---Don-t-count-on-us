@@ -19,7 +19,7 @@ class ColorDetector(object):
         self.high_s = 255
         self.high_v = 255
 
-        self.minR = 0
+        self.minR = 35
         self.maxR = 4500
         # endregion
 
@@ -79,7 +79,7 @@ class ColorDetector(object):
         self.maxR = maxarea
     # endregion
 
-    def filter(self, img:cv2.typing.MatLike|None, _iterations:int=1):
+    def filter(self, img:cv2.typing.MatLike|None, _iteration1:int=1, _iteration2:int=1):
         """颜色识别 二值化滤波
         * img: 传入的图像数据
         * 返回值：二值化过滤后的图像数据"""
@@ -95,8 +95,10 @@ class ColorDetector(object):
 
         mask = cv2.inRange(hsv, low, high)						# 通过阈值过滤图像，将在阈值范围内的像素点设置为255，不在阈值范围内的像素点设置为0
         # XXX: kernel的大小可能需要调整
-        kernel = np.ones((5, 5), np.uint8)						# 创建一个5*5的矩阵，矩阵元素全为1
-        res = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=_iterations)
+        kernel = np.ones((3, 3), np.uint8)						# 创建一个5*5的矩阵，矩阵元素全为1
+        res = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=_iteration1)   # 闭运算
+        # 开运算
+        res = cv2.morphologyEx(res, cv2.MORPH_OPEN, kernel, iterations=_iteration2)
         return res
 
     def draw_rectangle(self, img:cv2.typing.MatLike): 
@@ -292,7 +294,7 @@ class CircleDetector(object):
             x, y, r = circle
             x, y, r = int(x), int(y), int(r)
             cv2.circle(img0, (x, y), r, (255, 0, 255), 2)        # 画圆
-        return img, circles[0]
+        return img0, circles[0]
 
 if __name__ == '__main__':
     #TODO: 测试代码
