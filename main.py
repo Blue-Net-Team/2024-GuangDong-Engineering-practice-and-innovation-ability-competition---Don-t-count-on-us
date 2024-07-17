@@ -115,6 +115,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         * return: 是否识别到颜色"""
         self.set_threshold(thresholds[_colorindex])       # 设置阈值
         if self.img is None:return False
+        #TODO: 调整物料识别的开闭运算迭代参数
         mask = self.filter(self.img)                                 # 过滤
         if mask is None:return False
         img, p = self.draw_cycle(mask)
@@ -175,6 +176,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             p_average = [0, 0]
             ps = []
             self.set_threshold(thresholds[_colorindex])       # 设置阈值
+            # TODO: 调整色环识别的开闭运算迭代参数
             mask = self.filter(self.img)
             if mask is None:return None
             img1 = self.img.copy()
@@ -193,6 +195,8 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 p_average[1] = p_average[1] // 10
                 p_average[0], p_average[1] = int(p_average[0]), int(p_average[1])
                 # print(p_average)
+            else:
+                continue
 
             dx, dy = p_average[0] - CIRCLE_POINT[0], p_average[1] - CIRCLE_POINT[1]
             return 4, dx, dy

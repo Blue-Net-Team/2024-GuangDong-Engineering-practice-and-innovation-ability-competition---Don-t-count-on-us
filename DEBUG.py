@@ -273,6 +273,7 @@ class DEBUG(main.Solution):
             img1 = self.img.copy()
             img2 = self.img.copy()
             cv2.circle(img2, self.circle_point, self.r, (0, 255, 0), 2)
+            #TODO:此处开闭运算不应该包含色环部分
             mask = self.filter(self.img, 1, 0)        # 二值化的图像
             if mask is None: continue
 
