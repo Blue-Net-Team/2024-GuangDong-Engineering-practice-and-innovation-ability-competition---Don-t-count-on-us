@@ -204,7 +204,7 @@ class LineDetector(object):
                 angle = np.arctan(slope) * 180 / np.pi
                 # 将识别的线画出来
                 cv2.line(_img1, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                return _img1, angle
+                return _img1, int(angle)
 
         return _img1, None
     
@@ -229,7 +229,7 @@ class LineDetector(object):
                 # 计算直线的长度
                 length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
                 # 返回长度减去基准点的结果
-                return length - y0
+                return int(length - y0)
         
 
 class CircleDetector(object):
