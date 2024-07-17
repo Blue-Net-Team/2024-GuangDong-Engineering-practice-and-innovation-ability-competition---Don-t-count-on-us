@@ -29,6 +29,9 @@ from UART import UART
 import detector
 import cv2
 
+# --------------用于调试的库--------------
+from img_trans import VideoStreaming
+
 
 COLOR_dict = {
     0:'R',
@@ -75,8 +78,8 @@ try:        # 读取直线的基准y坐标
 except:
     pass
 
-class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDetector):
-    def __init__(self):
+class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDetector):     # type: ignore
+    def __init__(self, ifdebug:bool=False):
         self.init_part1()
         # 创建串口对象，self.ser继承了二维码识别的功能
         self.ser = UART()
@@ -90,6 +93,9 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         except:
             pass
 
+        if ifdebug:
+            self.debug = True
+
     def init_part1(self):
 
         # 创建识别器对象
@@ -99,6 +105,8 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         detector.LineDetector.set_threshold(self, (MINVAL, MAXVAL))
 
         self.mask = None
+        # 用于测试过程中发送图传的图片
+        self.testimg = None
 
     def send_msg(self, msg:str|int|Iterable):
         """从串口发送信号"""
@@ -119,22 +127,12 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         mask = self.filter(self.img)                                 # 过滤
         if mask is None:return False
         img, p = self.draw_cycle(mask)
-        if len(p) == 1:return True
-        return False
-    
-    def detect_clolr_plus(self, _colorindex:int) -> bool:
-        """
-         初步识别颜色之后判断物料是否在夹爪内
-        """
-        self.set_threshold(thresholds[_colorindex])       # 设置阈值
-        if self.img is None:return False
-        mask = self.filter(self.img)                                 # 过滤
-        if mask is None:return False
-        img, p = self.draw_cycle(mask)
-        if not p:return False
-        if circle_intersection_area(p[0][0], p[0][1], p[1], 
-                                    CIRCLE_POINT[0], CIRCLE_POINT[1], CIRCLE_R)/math.pi*CIRCLE_R**2 > 0.8:
-            return True
+        if self.debug:
+            self.testimg = img
+        if len(p) == 1:
+            if circle_intersection_area(p[0][0], p[0][1], p[1], 
+                                    CIRCLE_POINT[0], CIRCLE_POINT[1], CIRCLE_R)/math.pi*CIRCLE_R**2 > 0.8:      # 判断物料是否在夹爪内
+                return True
         return False
     
     
@@ -152,7 +150,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         """校准小车与直线的距离"""
         distance = self.get_distance(self.img)
         if distance is not None:
-            return 2, distance
+            return 2, int(distance)
 
 
     def DETECTCOLOR(self):
@@ -161,8 +159,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         """
         for i in range(3):
             if self.detect_color(i):
-                if self.detect_clolr_plus(i):
-                    return 3, i
+                return 3, i
 
 
     def LOCATECOLOR(self, _colorindex:int):
@@ -257,4 +254,22 @@ def circle_intersection_area(x0, y0, r0, x1, y1, r1):
 
 
 if __name__ == '__main__':
-    Solution()()
+    # Solution()()
+
+    # -------------功能测试代码-------------
+    s = Solution()
+    streaming = VideoStreaming('192.168.137.103', 8000)
+
+    while True:
+        s.img = s.cap.read()[1]
+        s.img = s.img[:300, :]
+
+        # 物料的识别
+        res:bool = s.detect_color(0)
+
+        # 色环的定位
+        # res = s.LOCATECOLOR(0)
+
+        streaming.send(s.testimg)    # 发送图传
+
+        print(res)
