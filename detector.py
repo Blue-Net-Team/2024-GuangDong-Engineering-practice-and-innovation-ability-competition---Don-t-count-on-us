@@ -82,6 +82,8 @@ class ColorDetector(object):
     def filter(self, img:cv2.typing.MatLike|None, _iteration1:int=1, _iteration2:int=1):
         """颜色识别 二值化滤波
         * img: 传入的图像数据
+        * iteration1: 闭运算的迭代次数
+        * iteration2: 开运算的迭代次数
         * 返回值：二值化过滤后的图像数据"""
         if img is None:return None
         _shape = img.shape

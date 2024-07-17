@@ -64,40 +64,42 @@ class DEBUG(main.Solution):
         """
         super().init_part1()
 
+        # 初始化圆形信息
         self.circle_point = (100, 100)
         self.r = 20
-        try:
+        try:    # 读取圆心和半径
             with open('circle.json', 'r') as f:
                 data = json.load(f)
                 self.circle_point = tuple(data['point'])
                 self.r = data['r']
-        except:
+        except FileNotFoundError:
             pass
 
-        self.y = 0
-        try:
+        self.y = 0      # 初始化直线的基准y坐标
+        try:            # 读取直线的基准y坐标
             with open('y.json', 'r') as f:
                 data = json.load(f)
                 self.y = data['y']
-        except:
+        except FileNotFoundError:
             pass
 
-        try:
+        try:        # 读取直线识别的canny算子的最小值和最大值
             with open('line.json', 'r') as f:
                 data = json.load(f)
                 self.minval = data['minval']
                 self.maxval = data['maxval']
-        except:
+        except FileNotFoundError:
             pass
 
-        try:
+        try:        # 读取物料识别的最小圆半径和最大圆半径
             with open('radius.json', 'r') as f:
                 data = json.load(f)
                 self.minR = data['minR']
                 self.maxR = data['maxR']
-        except:
+        except FileNotFoundError:
             pass
 
+        # 用于调整阈值表的索引
         self.color = 0  # 0红 1绿 2蓝
 
         if iftrans:
@@ -188,16 +190,27 @@ class DEBUG(main.Solution):
                 json.dump({'y':self.y}, f)
     # endregion
 
+    # region trackbar
     def __createTrackbar_color_and_circle(self):
+        """
+        创建色环和物料颜色识别的trackbar
+        """
+        # --------颜色阈值和物料最小圆半径和最大圆半径的调试trackbar--------
         main.detector.ColorDetector.createTrackbar(self)        # 呼出trackbar
         cv2.createTrackbar('RGB', 'Color and circle trackbar0', 0, 2, self.callback_color)
         cv2.createTrackbar('r', 'Color and circle trackbar0', self.r, 400, self.callback_circle)
         cv2.createTrackbar('OK', 'Color and circle trackbar0', 0, 1, self.callback_color_OK)
+
+        # --------色环最小圆半径和最大圆半径的调试trackbar--------
         main.detector.CircleDetector.createTrackbar(self)
 
     def __createTrackbar_line(self):
+        """
+        创建直线识别的trackbar
+        """
         main.detector.LineDetector.createTrackbar(self)
         cv2.createTrackbar('OK', 'Line trackbar0', 0, 1, self.callback_line_OK)
+    # endregion
 
     def SetCircleThresholds(self):
         """
@@ -221,7 +234,6 @@ class DEBUG(main.Solution):
             mask = self.filter(self.img, 1, 0)        # 二值化的图像
             if mask is None: continue
             img1 = cv2.bitwise_and(img1, img1, mask=mask)        # 与操作
-            # 
             mask1, p_list = self.get_circle(img1)        # 画出圆形的图像
 
             # self.img:原始图像
@@ -273,6 +285,7 @@ class DEBUG(main.Solution):
             img1 = self.img.copy()
             img2 = self.img.copy()
             cv2.circle(img2, self.circle_point, self.r, (0, 255, 0), 2)
+            #TODO:此处开闭运算不应该包含色环部分
             mask = self.filter(self.img, 1, 0)        # 二值化的图像
             if mask is None: continue
 
