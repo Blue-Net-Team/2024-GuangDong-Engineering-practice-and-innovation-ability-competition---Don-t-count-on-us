@@ -87,3 +87,12 @@ class UART(serial.Serial):
     
     def __del__(self) -> None:
         return self.close()
+
+
+if __name__ == '__main__':
+    ser = UART()
+    # ser.send(123)
+    # ser.send_arr([1, 2, 3, 4, 5])
+    ser.write('hello')
+    # print(ser.read())
+    # del ser
