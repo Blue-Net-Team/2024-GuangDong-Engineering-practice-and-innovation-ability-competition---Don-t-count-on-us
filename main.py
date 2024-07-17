@@ -131,7 +131,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         if mask is None:return False
         img, p = self.draw_cycle(mask)
         if not p:return False
-        if circle_intersection_area(p[0][0], p[0][1], p[1], 
+        if circle_intersection_area(p[0][0][0], p[0][0][1], p[0][1], 
                                     CIRCLE_POINT[0], CIRCLE_POINT[1], CIRCLE_R)/math.pi*CIRCLE_R**2 > 0.8:
             return True
         return False
