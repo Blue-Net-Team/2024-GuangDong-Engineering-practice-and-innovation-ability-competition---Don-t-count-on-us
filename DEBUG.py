@@ -311,6 +311,16 @@ class DEBUG(main.Solution):
             if cv2.waitKey(1) == 27:        # 按下ESC键退出
                 break
 
+    def ReadOriImg(self):
+        """读取原图"""
+        while True:
+            _, self.img = self.reveiver.read()
+            if self.img is None:continue        # 如果没有读取到图像数据，继续循环
+            cv2.imshow('img', self.img)
+            if cv2.waitKey(1) == 27:        # 按下ESC键退出
+                break
+
+            
 if __name__ == '__main__':
     debug = DEBUG(True)
     # region 阈值调试
