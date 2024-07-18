@@ -24,6 +24,7 @@ r"""
 """
 import json
 import math
+import multiprocessing
 from typing import Iterable
 from UART import UART
 import detector
@@ -225,10 +226,19 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             return 4, dx, dy
         
 
+    def SEND_TESTIMG(self):
+        streaming = VideoStreaming('192.168.137.91', 8000)
+        while True:
+            if self.testimg is not None:
+                streaming.send(self.testimg)    # 发送图传
+
     def __call__(self):
+        img_test_process = multiprocessing.Process(target=self.SEND_TESTIMG)
+        img_test_process.start()
         while True:
             data = self.ser.read()
             if not data: continue
+            print(f'收到信号 {data}')
             self.img = self.cap.read()[1]
             self.img = self.img[:300, :]
 

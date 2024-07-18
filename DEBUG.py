@@ -67,7 +67,7 @@ class DEBUG(main.Solution):
         if iftrans:
             # 图传
             # TODO: 修改IP地址
-            self.reveiver = ReceiveImg('192.168.137.103', 8000)
+            self.reveiver = ReceiveImg('192.168.137.91', 8000)
         else:
             self.reveiver = cv2.VideoCapture(capid)
 
