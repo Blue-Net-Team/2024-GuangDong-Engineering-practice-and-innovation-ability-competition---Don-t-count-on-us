@@ -214,7 +214,7 @@ class DEBUG(main.Solution):
         num = 0
         while True:
             p_average = [0, 0]
-            ps = []
+            ps = []             # points
             _, self.img = self.reveiver.read()
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
             self.img = self.img[:300, :]
@@ -240,7 +240,7 @@ class DEBUG(main.Solution):
                 # print(p_list)
                 ps.append((p_list[0][0], p_list[0][1]))
                 num += 1
-            if num % 10 == 0 and num != 0:
+            if num % 10 == 0 and num != 0:      # 每10次取平均值
                 for i in ps:
                     p_average[0] += i[0]
                     p_average[1] += i[1]
