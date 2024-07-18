@@ -22,7 +22,7 @@ class ReceiveImg(object):
         print(" ")
         print("已连接到服务端：")
         print("Host : ", host)
-        print("请按‘q’退出图像传输!")
+        print("请按‘esc’退出图像传输!")
 
     def read(self):
         try:
@@ -53,13 +53,27 @@ class DEBUG(main.Solution):
         super().init_part1()
 
         # 初始化圆形信息
-        self.circle_point = main.CIRCLE_POINT
-        self.r = main.CIRCLE_R
+        self.circle_point1 = main.CIRCLE_POINT1
+        self.r1 = main.CIRCLE_R1
+
+        self.circle_point2 = main.CIRCLE_POINT2
+        self.r2 = main.CIRCLE_R2
 
         self.y = main.Y0
 
         self.maxval = main.MAXVAL
         self.minval = main.MINVAL
+
+        self.circle_id = 0
+
+        if self.circle_id == 0:
+                self.circle_point = self.circle_point1
+                self.r = self.r1
+        elif self.circle_id == 1:
+            self.circle_point = self.circle_point2
+            self.r = self.r2
+        else:
+            raise ValueError('circle_id error')
         
         # 用于调整阈值表的索引
         self.color = 0  # 0红 1绿 2蓝
@@ -67,7 +81,7 @@ class DEBUG(main.Solution):
         if iftrans:
             # 图传
             # TODO: 修改IP地址
-            self.reveiver = ReceiveImg('192.168.137.91', 8000)
+            self.reveiver = ReceiveImg('192.168.137.141', 8000)
         else:
             self.reveiver = cv2.VideoCapture(capid)
 
@@ -133,7 +147,7 @@ class DEBUG(main.Solution):
         if x == 1:      # 保存
             with open(f'{main.COLOR_dict[self.color]}.json', 'w') as f:
                 json.dump(thresholds[self.color], f)
-            with open('circle.json', 'w') as f:
+            with open(f'circle{self.circle_id+1}.json', 'w') as f:
                 json.dump({'point':self.circle_point, 'r':self.r}, f)
 
             with open('radius.json', 'w') as f:
@@ -176,6 +190,9 @@ class DEBUG(main.Solution):
 
     def callback_circle_close(self, x):
         self.circle_close = x
+
+    def callback_circle_choise(self, x):
+        self.circle_id =  x
     # endregion
 
     # region trackbar
@@ -189,6 +206,7 @@ class DEBUG(main.Solution):
         cv2.createTrackbar('close', 'Color and circle trackbar0', self.color_close, 5, self.callback_color_close)      # 闭运算trackbar
         cv2.createTrackbar('RGB', 'Color and circle trackbar0', 0, 2, self.callback_color)          # 颜色选择trackbar
         cv2.createTrackbar('r', 'Color and circle trackbar0', self.r, 400, self.callback_circle)    # 基准圆半径trackbar
+        cv2.createTrackbar('circle id', 'Color and circle trackbar0', 0, 1, self.callback_circle_choise)    # 圆的id
         cv2.createTrackbar('OK', 'Color and circle trackbar0', 0, 1, self.callback_color_OK)        # 保存trackbar
 
         # --------色环最小圆半径和最大圆半径的调试trackbar--------
@@ -276,6 +294,16 @@ class DEBUG(main.Solution):
             # 画出色环应该在的位置和大小
             img1 = self.img.copy()
             img2 = self.img.copy()
+
+            if self.circle_id == 0:
+                self.circle_point = self.circle_point1
+                self.r = self.r1
+            elif self.circle_id == 1:
+                self.circle_point = self.circle_point2
+                self.r = self.r2
+            else:
+                raise ValueError('circle_id error')
+            
             cv2.circle(img2, self.circle_point, self.r, (0, 255, 0), 2)
             mask = self.filter(self.img, self.color_close, self.color_open)        # 二值化的图像
             if mask is None: continue
@@ -320,12 +348,13 @@ class DEBUG(main.Solution):
             if cv2.waitKey(1) == 27:        # 按下ESC键退出
                 break
 
-            
+
 if __name__ == '__main__':
-    debug = DEBUG(True)
+    debug = DEBUG(False)
     # region 阈值调试
-    debug.SetCircleThresholds()
+    # debug.SetCircleThresholds()
     # debug.SetLineThresholds()
-    # debug.SetColorThresholds()
+    debug.SetColorThresholds()
+    # debug.ReadOriImg()
     # endregion
 
