@@ -65,23 +65,51 @@ try:        # 读取圆心和半径
         data = json.load(f)
         CIRCLE_POINT = tuple(data['point'])
         CIRCLE_R = data['r']
-except:
+except FileNotFoundError:
     pass
 
 MINVAL = 0
 MAXVAL = 255
-try:        # 读取直线的基准y坐标
-    with open('y.json', 'r') as f:
+try:        # 直线canny算子的参数
+    with open('line.json', 'r') as f:
         data = json.load(f)
         MINVAL = data['minval']
         MAXVAL = data['maxval']
-except:
+except FileNotFoundError:
+    pass
+
+Y0 = 0
+try:        # 直线的基准y坐标
+    with open('y.json', 'r') as f:
+        data = json.load(f)
+        Y0 = data['y']
+except FileNotFoundError:
+    pass
+
+# 物料识别的开闭运算参数
+COLOR_COLSE = 0
+COLOR_OPEN = 1
+try:
+    with open('color_oc.json', 'r') as f:
+        data = json.load(f)
+        COLOR_COLSE = data['close']
+        COLOR_OPEN = data['open']
+except FileNotFoundError:
+    pass
+
+CIRCLE_OPEN = 0 
+CIRCLE_CLOSE = 1
+try:
+    with open('circle_oc.json', 'r') as f:
+        data = json.load(f)
+        CIRCLE_OPEN = data['open']
+        CIRCLE_CLOSE = data['close']
+except FileNotFoundError:
     pass
 
 class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDetector):     # type: ignore
     def __init__(self, ifdebug:bool=False):
         self.init_part1()
-        # 创建串口对象，self.ser继承了二维码识别的功能
         self.ser = UART()
         self.cap = cv2.VideoCapture(0)
 
@@ -123,8 +151,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         * return: 是否识别到颜色"""
         self.set_threshold(thresholds[_colorindex])       # 设置阈值
         if self.img is None:return False
-        #TODO: 调整物料识别的开闭运算迭代参数
-        mask = self.filter(self.img)                                 # 过滤
+        mask = self.filter(self.img, COLOR_COLSE, COLOR_OPEN)                                 # 过滤
         if mask is None:return False
         img, p = self.draw_cycle(mask)
         if self.debug:
@@ -148,7 +175,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
 
     def CORRECTION_distance(self) -> tuple[int,int]|None:
         """校准小车与直线的距离"""
-        distance = self.get_distance(self.img)
+        distance = self.get_distance(self.img, Y0)
         if distance is not None:
             return 2, int(distance)
 
@@ -173,8 +200,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             p_average = [0, 0]
             ps = []
             self.set_threshold(thresholds[_colorindex])       # 设置阈值
-            # TODO: 调整色环识别的开闭运算迭代参数
-            mask = self.filter(self.img)
+            mask = self.filter(self.img, CIRCLE_CLOSE, CIRCLE_OPEN)
             if mask is None:return None
             img1 = self.img.copy()
             img1 = cv2.bitwise_and(img1, img1, mask=mask)        # 与操作

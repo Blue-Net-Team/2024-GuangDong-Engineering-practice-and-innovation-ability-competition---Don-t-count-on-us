@@ -111,6 +111,29 @@ class DEBUG(main.Solution):
 
         self.set_threshold(thresholds[self.color])
 
+        #TODO:此处开闭运算不应该包含色环部分
+        self.color_open = 0     # 物料颜色识别的开运算参数
+        self.color_close = 1    # 物料颜色识别的闭运算参数
+        try:
+            with open('color_oc.json', 'r') as f:
+                data = json.load(f)
+                self.color_open = data['open']
+                self.color_close = data['close']
+        except FileNotFoundError:
+            pass
+
+        
+        # TODO:此处开闭运算要将整个色环包住
+        self.circle_open = 0    # 色环识别的开运算参数
+        self.circle_close = 1
+        try:
+            with open('circle_oc.json', 'r') as f:
+                data = json.load(f)
+                self.circle_open = data['open']
+                self.circle_close = data['close']
+        except FileNotFoundError:
+            pass
+
     # region 鼠标事件
     def mouse_action_circlePoint(self, event, x, y, flags, param):
         """鼠标事件回调函数
@@ -168,6 +191,12 @@ class DEBUG(main.Solution):
 
             with open('radius.json', 'w') as f:
                 json.dump({'minR':self.minR, 'maxR':self.maxR}, f)
+
+            with open('color_oc.json', 'w') as f:
+                json.dump({'open':self.color_open, 'close':self.color_close}, f)
+
+            with open('circle_oc.json', 'w') as f:
+                json.dump({'open':self.circle_open, 'close':self.circle_close}, f)
             
     def callback_color(self, x):
         self.color = x
@@ -188,6 +217,18 @@ class DEBUG(main.Solution):
  
             with open('y.json', 'w') as f:
                 json.dump({'y':self.y}, f)
+
+    def callback_color_open(self, x):
+        self.color_open = x
+
+    def callback_color_close(self, x):
+        self.color_close = x
+
+    def callback_circle_open(self, x):
+        self.circle_open = x
+
+    def callback_circle_close(self, x):
+        self.circle_close = x
     # endregion
 
     # region trackbar
@@ -196,13 +237,17 @@ class DEBUG(main.Solution):
         创建色环和物料颜色识别的trackbar
         """
         # --------颜色阈值和物料最小圆半径和最大圆半径的调试trackbar--------
-        main.detector.ColorDetector.createTrackbar(self)        # 呼出trackbar
-        cv2.createTrackbar('RGB', 'Color and circle trackbar0', 0, 2, self.callback_color)
-        cv2.createTrackbar('r', 'Color and circle trackbar0', self.r, 400, self.callback_circle)
-        cv2.createTrackbar('OK', 'Color and circle trackbar0', 0, 1, self.callback_color_OK)
+        main.detector.ColorDetector.createTrackbar(self)        # 呼出颜色阈值和外接圆半径trackbar
+        cv2.createTrackbar('open', 'Color and circle trackbar0', self.color_open, 5, self.callback_color_open)        # 开运算trackbar
+        cv2.createTrackbar('close', 'Color and circle trackbar0', self.color_close, 5, self.callback_color_close)      # 闭运算trackbar
+        cv2.createTrackbar('RGB', 'Color and circle trackbar0', 0, 2, self.callback_color)          # 颜色选择trackbar
+        cv2.createTrackbar('r', 'Color and circle trackbar0', self.r, 400, self.callback_circle)    # 基准圆半径trackbar
+        cv2.createTrackbar('OK', 'Color and circle trackbar0', 0, 1, self.callback_color_OK)        # 保存trackbar
 
         # --------色环最小圆半径和最大圆半径的调试trackbar--------
         main.detector.CircleDetector.createTrackbar(self)
+        cv2.createTrackbar('open', 'Circle trackbar0', self.circle_open, 5, self.callback_circle_open)        # 开运算trackbar
+        cv2.createTrackbar('close', 'Circle trackbar0', self.circle_close, 5, self.callback_circle_close)      # 闭运算trackbar
 
     def __createTrackbar_line(self):
         """
@@ -231,7 +276,7 @@ class DEBUG(main.Solution):
             img1 = self.img.copy()
             img2 = self.img.copy()
             cv2.circle(img2, self.circle_point, self.r, (0, 255, 0), 2)
-            mask = self.filter(self.img, 1, 0)        # 二值化的图像
+            mask = self.filter(self.img, self.circle_close, self.circle_open)        # 二值化的图像
             if mask is None: continue
             img1 = cv2.bitwise_and(img1, img1, mask=mask)        # 与操作
             mask1, p_list = self.get_circle(img1)        # 画出圆形的图像
@@ -285,8 +330,7 @@ class DEBUG(main.Solution):
             img1 = self.img.copy()
             img2 = self.img.copy()
             cv2.circle(img2, self.circle_point, self.r, (0, 255, 0), 2)
-            #TODO:此处开闭运算不应该包含色环部分
-            mask = self.filter(self.img, 1, 0)        # 二值化的图像
+            mask = self.filter(self.img, self.color_close, self.color_open)        # 二值化的图像
             if mask is None: continue
 
             res, p_list = self.draw_cycle(mask)
