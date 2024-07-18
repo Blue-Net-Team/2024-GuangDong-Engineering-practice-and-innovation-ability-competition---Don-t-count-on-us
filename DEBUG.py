@@ -6,19 +6,7 @@ import numpy as np
 import main
 
 
-thresholds = [
-    #[low_h, low_s, low_v], [high_h, high_s, high_v]
-    ([0, 0, 0], [255, 255, 255]),
-    ([0, 0, 0], [255, 255, 255]),
-    ([0, 0, 0], [255, 255, 255]),
-]
-
-for i in range(3):
-    try:
-        with open(f'{main.COLOR_dict[i]}.json', 'r') as f:
-            thresholds[i] = json.load(f)
-    except:
-        pass
+thresholds = main.thresholds
 
 class ReceiveImg(object):
     def __init__(self, host, port):
@@ -65,40 +53,14 @@ class DEBUG(main.Solution):
         super().init_part1()
 
         # 初始化圆形信息
-        self.circle_point = (100, 100)
-        self.r = 20
-        try:    # 读取圆心和半径
-            with open('circle.json', 'r') as f:
-                data = json.load(f)
-                self.circle_point = tuple(data['point'])
-                self.r = data['r']
-        except FileNotFoundError:
-            pass
+        self.circle_point = main.CIRCLE_POINT
+        self.r = main.CIRCLE_R
 
-        self.y = 0      # 初始化直线的基准y坐标
-        try:            # 读取直线的基准y坐标
-            with open('y.json', 'r') as f:
-                data = json.load(f)
-                self.y = data['y']
-        except FileNotFoundError:
-            pass
+        self.y = main.Y0
 
-        try:        # 读取直线识别的canny算子的最小值和最大值
-            with open('line.json', 'r') as f:
-                data = json.load(f)
-                self.minval = data['minval']
-                self.maxval = data['maxval']
-        except FileNotFoundError:
-            pass
-
-        try:        # 读取物料识别的最小圆半径和最大圆半径
-            with open('radius.json', 'r') as f:
-                data = json.load(f)
-                self.minR = data['minR']
-                self.maxR = data['maxR']
-        except FileNotFoundError:
-            pass
-
+        self.maxval = main.MAXVAL
+        self.minval = main.MINVAL
+        
         # 用于调整阈值表的索引
         self.color = 0  # 0红 1绿 2蓝
 
@@ -112,27 +74,12 @@ class DEBUG(main.Solution):
         self.set_threshold(thresholds[self.color])
 
         #TODO:此处开闭运算不应该包含色环部分
-        self.color_open = 0     # 物料颜色识别的开运算参数
-        self.color_close = 1    # 物料颜色识别的闭运算参数
-        try:
-            with open('color_oc.json', 'r') as f:
-                data = json.load(f)
-                self.color_open = data['open']
-                self.color_close = data['close']
-        except FileNotFoundError:
-            pass
-
+        self.color_open = main.COLOR_OPEN
+        self.color_close = main.COLOR_COLSE
         
-        # TODO:此处开闭运算要将整个色环包住
-        self.circle_open = 0    # 色环识别的开运算参数
-        self.circle_close = 1
-        try:
-            with open('circle_oc.json', 'r') as f:
-                data = json.load(f)
-                self.circle_open = data['open']
-                self.circle_close = data['close']
-        except FileNotFoundError:
-            pass
+        # TODO:此处开闭运算要将整个色环包
+        self.circle_open = main.CIRCLE_OPEN
+        self.circle_close = main.CIRCLE_CLOSE
 
     # region 鼠标事件
     def mouse_action_circlePoint(self, event, x, y, flags, param):

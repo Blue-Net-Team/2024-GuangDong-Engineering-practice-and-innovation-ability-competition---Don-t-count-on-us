@@ -46,9 +46,9 @@ COLOR_dict_reverse = {
 
 thresholds = [
     #[low_h, low_s, low_v], [high_h, high_s, high_v]
-    ([0, 0, 0], [0, 0, 0]),
-    ([0, 0, 0], [0, 0, 0]),
-    ([0, 0, 0], [0, 0, 0]),
+    ([0, 0, 0], [255, 255, 255]),
+    ([0, 0, 0], [255, 255, 255]),
+    ([0, 0, 0], [255, 255, 255]),
 ]
 # 读取阈值
 for i in range(3):
@@ -113,14 +113,6 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         self.ser = UART()
         self.cap = cv2.VideoCapture(0)
 
-        try:
-            with open('radius.json', 'r') as f:
-                data = json.load(f)
-                self.minR = data['minR']
-                self.maxR = data['maxR']
-        except:
-            pass
-
         if ifdebug:
             self.debug = True
 
@@ -131,6 +123,14 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         detector.LineDetector.__init__(self)
         detector.CircleDetector.__init__(self)
         detector.LineDetector.set_threshold(self, (MINVAL, MAXVAL))
+
+        try:
+            with open('radius.json', 'r') as f:
+                data = json.load(f)
+                self.minR = data['minR']
+                self.maxR = data['maxR']
+        except:
+            pass
 
         self.mask = None
         # 用于测试过程中发送图传的图片
