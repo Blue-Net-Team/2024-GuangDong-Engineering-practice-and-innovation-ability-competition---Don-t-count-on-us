@@ -96,7 +96,6 @@ class ColorDetector(object):
         high = np.array([self.high_h, self.high_s, self.high_v])	# 高阈值
 
         mask = cv2.inRange(hsv, low, high)						# 通过阈值过滤图像，将在阈值范围内的像素点设置为255，不在阈值范围内的像素点设置为0
-        # XXX: kernel的大小可能需要调整
         kernel = np.ones((3, 3), np.uint8)						# 创建一个5*5的矩阵，矩阵元素全为1
         res = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=_iteration1)   # 闭运算
         # 开运算
@@ -239,7 +238,6 @@ class CircleDetector(object):
     通过霍夫圆环检测算法检测圆环
     """
     def __init__(self) -> None:
-        # TODO: 修改相关参数
         self.totalizer = 100
         self.maxval = 20
         self.mindist = 100
@@ -298,8 +296,8 @@ class CircleDetector(object):
             cv2.circle(img0, (x, y), r, (255, 0, 255), 2)        # 画圆
         return img0, circles[0]
 
+# ------------------------------测试代码------------------------------
 if __name__ == '__main__':
-    #TODO: 测试代码
     line = LineDetector()
     cap = cv2.VideoCapture(0)
 
