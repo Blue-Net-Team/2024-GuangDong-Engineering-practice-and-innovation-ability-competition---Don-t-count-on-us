@@ -88,10 +88,12 @@ class ReceiveImg(object):
                 jpg = self.stream_bytes[first:last + 2]					# 帧头和帧尾中间的数据就是二进制图片数据（编码后的二进制图片数据，需要解码后使用）
                 self.stream_bytes = self.stream_bytes[last + 2:]				# 更新stream_bytes数据
                 image = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)			# 将二进制图片数据转换成numpy.uint8格式（也就是图片格式）数据，然后解码获得图片数据
-                return image
+                return True, image
 
         except:
             print("Error：连接出错！")
+        return False, None
+        
 
             
 if __name__ == '__main__':
