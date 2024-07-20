@@ -41,13 +41,12 @@ class UART(serial.Serial):
         return wrapper
     
     @send_pack_str
-    def send_arr(self, args:Iterable):
+    def send_arr(self, args:list[int]|tuple[int]):
         """发送数组,包含包头包尾数据"""
-        for i in args:
-            data = i
-            if isinstance(i, int):
-                data = struct.pack('>i', i)     # 发送四个字节，端小字节序
-            super().write(data)
+        for index, i in enumerate(args):
+            self.write_with_no_pack(str(i))
+            if index != len(args) - 1:
+                self.write_with_no_pack(',')
 
     @send_pack_str
     def send(self, data:int):
@@ -58,6 +57,10 @@ class UART(serial.Serial):
     @send_pack_str
     def write(self, data:str) -> int | None:
         """发送字符串数据,包含包头包尾"""
+        return super().write(data.encode('ascii'))
+    
+    def write_with_no_pack(self, data:str) -> int | None:
+        """发送字符串数据,不包含包头包尾"""
         return super().write(data.encode('ascii'))
     
     def read(self, ifdecode=True, head=b'@', tail=b'#'):
@@ -93,6 +96,6 @@ if __name__ == '__main__':
     ser = UART()
     # ser.send(123)
     # ser.send_arr([1, 2, 3, 4, 5])
-    ser.write('hello')
+    ser.write('123')
     # print(ser.read())
     # del ser

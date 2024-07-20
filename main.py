@@ -130,7 +130,6 @@ except FileNotFoundError:
 # endregion
 
 
-
 class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDetector):     # type: ignore
     def __init__(self, ifdebug:bool=False):
         self.init_part1()
@@ -159,14 +158,13 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         # 用于测试过程中发送图传的图片
         self.testimg = None
 
-    def send_msg(self, msg:str|int|Iterable):
+    def send_msg(self, msg:str|int|list[int]|tuple[int]):
         """从串口发送信号"""
-        if isinstance(msg, str):
-            self.ser.write(msg)
-        elif isinstance(msg, int):
-            self.ser.send(msg)
-        elif isinstance(msg, Iterable):
+        if isinstance(msg, list) or isinstance(msg, tuple):
             self.ser.send_arr(msg)
+        else:
+            self.ser.write(str(msg))
+
 
     def Detect_color(self, _colorindex:int, time:int):
         """颜色识别

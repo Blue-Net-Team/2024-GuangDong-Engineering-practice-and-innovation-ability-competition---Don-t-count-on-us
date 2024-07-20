@@ -327,11 +327,11 @@ class DEBUG(main.Solution):
 
 
 if __name__ == '__main__':
-    debug = DEBUG(False)
+    debug = DEBUG(True)
     # region 阈值调试
     # debug.SetCircleThresholds()
-    debug.SetLineThresholds()
-    # debug.SetColorThresholds()
+    # debug.SetLineThresholds()
+    debug.SetColorThresholds()
     # debug.ReadOriImg()
     # endregion
 
