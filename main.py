@@ -189,12 +189,12 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         if self.debug:
             self.testimg = img
         if len(p) == 1:
-            if circle_intersection_area(p[0][0], p[0][1], p[0][1], 
+            if circle_intersection_area(p[0][0][0], p[0][0][1], p[0][1], 
                                     CIRCLE_POINT[0], CIRCLE_POINT[1], CIRCLE_R)/math.pi*CIRCLE_R1**2 > 0.8:      # 判断物料是否在夹爪内
                 return True, 0, 0
             else:
-                dx:int = p[0][0] - CIRCLE_POINT[0]
-                dy:int = p[0][1] - CIRCLE_POINT[1]
+                dx:int = p[0][0][0] - CIRCLE_POINT[0]
+                dy:int = p[0][0][1] - CIRCLE_POINT[1]
                 return False, dx, dy
             
         return False, None, None
