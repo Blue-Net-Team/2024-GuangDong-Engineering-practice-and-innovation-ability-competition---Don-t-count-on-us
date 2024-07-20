@@ -255,8 +255,10 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 # print(p_average)
             else:
                 continue
-
-            dx, dy = p_average[0] - CIRCLE_POINT1[0], p_average[1] - CIRCLE_POINT1[1]
+            
+            if p_average == [0, 0]:
+                return None
+            dx, dy = p_average[0] - CIRCLE_POINT2[0], p_average[1] - CIRCLE_POINT2[1]
             return 4, dx, dy
         
 
@@ -280,14 +282,20 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 data = self.CORRECTION_angle()
                 if data is not None:
                     self.send_msg(data)
+                else:
+                    self.send_msg((255,255,255,255))
             elif data == 'D':       # 校准距离
                 data = self.CORRECTION_distance()
                 if data is not None:
                     self.send_msg(data)
+                else:
+                    self.send_msg((255,255,255,255))
             elif data == 'c1':          # 在转盘上夹取物料
                 data = self.DETECTCOLOR()
                 if data is not None:
                     self.send_msg(data)
+                else:
+                    self.send_msg((255,255,255,255))
             elif data[0] == 'c':        # 发送cR cG cB,在地上夹取物料
                 res = self.Detect_color(COLOR_dict_reverse[data[1]], 2)
                 if res[0]:
@@ -301,14 +309,20 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                     data = self.LOCATECOLOR(0)
                     if data is not None:
                         self.send_msg(data)
+                    else:
+                        self.send_msg((255,255,255,255))
                 elif data[1] == 'G':
                     data = self.LOCATECOLOR(1)
                     if data is not None:
                         self.send_msg(data)
+                    else:
+                        self.send_msg((255,255,255,255))
                 elif data[1] == 'B':
                     data = self.LOCATECOLOR(2)
                     if data is not None:
                         self.send_msg(data)
+                    else:
+                        self.send_msg((255,255,255,255))
 
 def circle_intersection_area(x0, y0, r0, x1, y1, r1):
     """计算两个圆的重叠面积"""
