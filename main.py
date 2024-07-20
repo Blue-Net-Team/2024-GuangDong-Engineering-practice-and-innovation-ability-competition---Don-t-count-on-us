@@ -281,14 +281,14 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                     self.send_msg(data)
                 else:
                     self.send_msg((255,255,255,255))
-            elif data[0] == 'c':          # 在转盘上夹取物料,发送c0 c1 c2
+            elif data in ['c0', 'c1', 'c2']:          # 在转盘上夹取物料,发送c0 c1 c2
                 data = self.Detect_color(int(data[1]), 1)
                 if data is not None:
                     self.send_msg(data)
                 else:
                     self.send_msg((255,255,255,255))
-            elif data[0] == 'c':        # 发送cR cG cB,在地上夹取物料
-                res = self.Detect_color(int(data[1]), 2)
+            elif data in ['cR', 'cG', 'cB']:        # 发送cR cG cB,在地上夹取物料
+                res = self.Detect_color(int(COLOR_dict[data[1]]), 2)
                 if res[0]:
                     msg = 3, 1, res[1], res[2]
                     self.send_msg(msg)
