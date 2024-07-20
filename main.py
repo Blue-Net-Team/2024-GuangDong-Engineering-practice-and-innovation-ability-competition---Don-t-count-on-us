@@ -118,6 +118,16 @@ try:
 except FileNotFoundError:
     pass
 
+LINE_OPEN = 0
+LINE_CLOSE = 1
+try:
+    with open('line_oc.json', 'r') as f:
+        data = json.load(f)
+        LINE_OPEN = data['open']
+        LINE_CLOSE = data['close']
+except FileNotFoundError:
+    pass
+
 class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDetector):     # type: ignore
     def __init__(self, ifdebug:bool=False):
         self.init_part1()

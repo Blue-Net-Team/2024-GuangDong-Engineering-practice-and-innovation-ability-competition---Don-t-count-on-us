@@ -95,6 +95,9 @@ class DEBUG(main.Solution):
         self.circle_open = main.CIRCLE_OPEN
         self.circle_close = main.CIRCLE_CLOSE
 
+        self.line_open = main.LINE_OPEN
+        self.line_close = main.LINE_CLOSE
+
     # region 鼠标事件
     def mouse_action_circlePoint(self, event, x, y, flags, param):
         """鼠标事件回调函数
@@ -145,12 +148,12 @@ class DEBUG(main.Solution):
 
     def callback_color_OK(self, x):
         if x == 1:      # 保存
-            with open(f'{main.COLOR_dict[self.color]}.json', 'w') as f:
+            with open(f'{main.COLOR_dict[self.color]}.json', 'w') as f: # 保存颜色阈值
                 json.dump(thresholds[self.color], f)
-            with open(f'circle{self.circle_id+1}.json', 'w') as f:
+            with open(f'circle{self.circle_id+1}.json', 'w') as f:      # 保存夹爪基准圆的信息
                 json.dump({'point':self.circle_point, 'r':self.r}, f)
 
-            with open('radius.json', 'w') as f:
+            with open('radius.json', 'w') as f:                         # 保存物料最小圆半径和最大圆半径
                 json.dump({'minR':self.minR, 'maxR':self.maxR}, f)
 
             with open('color_oc.json', 'w') as f:
@@ -179,6 +182,9 @@ class DEBUG(main.Solution):
             with open('y.json', 'w') as f:
                 json.dump({'y':self.y}, f)
 
+            with open('line_oc.json', 'w') as f:
+                json.dump({'open':self.line_open, 'close':self.line_close}, f)
+
     def callback_color_open(self, x):
         self.color_open = x
 
@@ -193,6 +199,12 @@ class DEBUG(main.Solution):
 
     def callback_circle_choise(self, x):
         self.circle_id =  x
+
+    def callback_line_open(self, x):
+        self.line_open = x
+
+    def callback_line_close(self, x):
+        self.line_close = x
     # endregion
 
     # region trackbar
@@ -219,6 +231,8 @@ class DEBUG(main.Solution):
         创建直线识别的trackbar
         """
         main.detector.LineDetector.createTrackbar(self)
+        cv2.createTrackbar('open', 'Line trackbar0', self.line_open, 10, self.callback_line_open)        # 开运算trackbar
+        cv2.createTrackbar('close', 'Line trackbar0', self.line_close, 10, self.callback_line_close)      # 闭运算trackbar
         cv2.createTrackbar('OK', 'Line trackbar0', 0, 1, self.callback_line_OK)
     # endregion
 
@@ -330,7 +344,7 @@ class DEBUG(main.Solution):
             _, self.img = self.reveiver.read()
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
             img1 = self.img.copy()
-            img1, angle = self.get_angle(self.img, True)
+            img1, angle = self.get_angle(self.img, True, self.line_close, self.line_open)
             distance = self.get_distance(self.img, self.y, True)
 
             print(f'angle:{angle}, distance:{distance}')
@@ -353,8 +367,8 @@ if __name__ == '__main__':
     debug = DEBUG(False)
     # region 阈值调试
     # debug.SetCircleThresholds()
-    # debug.SetLineThresholds()
-    debug.SetColorThresholds()
+    debug.SetLineThresholds()
+    # debug.SetColorThresholds()
     # debug.ReadOriImg()
     # endregion
 
