@@ -33,7 +33,7 @@ import cv2
 # --------------用于调试的库--------------
 from img_trans import VideoStreaming
 
-
+#region 参数加载
 COLOR_dict = {
     0:'R',
     1:'G',
@@ -127,6 +127,9 @@ try:
         LINE_CLOSE = data['close']
 except FileNotFoundError:
     pass
+# endregion
+
+
 
 class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDetector):     # type: ignore
     def __init__(self, ifdebug:bool=False):
@@ -187,42 +190,30 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         if self.debug:
             self.testimg = img
         if len(p) == 1:
-            if circle_intersection_area(p[0][0][0], p[0][0][1], p[0][1], 
+            if circle_intersection_area(p[0][0], p[0][1], p[0][1], 
                                     CIRCLE_POINT[0], CIRCLE_POINT[1], CIRCLE_R)/math.pi*CIRCLE_R1**2 > 0.8:      # 判断物料是否在夹爪内
                 return True, 0, 0
             else:
-                dx:int = p[0][0][0] - CIRCLE_POINT[0]
-                dy:int = p[0][0][1] - CIRCLE_POINT[1]
+                dx:int = p[0][0] - CIRCLE_POINT[0]
+                dy:int = p[0][1] - CIRCLE_POINT[1]
                 return False, dx, dy
             
         return False, None, None
     
-    
-    def CORRECTION_angle(self) -> tuple[int, int]|None:
+    def CORRECTION_angle(self) -> int|None:
         """校准小车与直线的角度
         * return: 识别到的角度,如果没有识别到直线返回None"""
         _, angle = self.get_angle(self.img)
         if angle is not None:
             angle = int(angle)
             if abs(angle-90) > 0:
-                return 1, angle
+                return angle
 
-
-    def CORRECTION_distance(self) -> tuple[int,int]|None:
+    def CORRECTION_distance(self) -> int|None:
         """校准小车与直线的距离"""
         distance = self.get_distance(self.img, Y0)
         if distance is not None:
-            return 2, int(distance)
-
-
-    def DETECTCOLOR(self):
-        """
-        物料颜色识别, 识别到什么颜色就发送什么信号(1,2,3)
-        """
-        for i in range(3):
-            if self.Detect_color(i, 1):
-                return 3, i
-
+            return int(distance)
 
     def LOCATECOLOR(self, _colorindex:int):
         """
@@ -259,9 +250,8 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             if p_average == [0, 0]:
                 return None
             dx, dy = p_average[0] - CIRCLE_POINT2[0], p_average[1] - CIRCLE_POINT2[1]
-            return 4, dx, dy
+            return dx, dy
         
-
     def SEND_TESTIMG(self):
         streaming = VideoStreaming('192.168.137.91', 8000)
         while True:
@@ -290,14 +280,14 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                     self.send_msg(data)
                 else:
                     self.send_msg((255,255,255,255))
-            elif data == 'c1':          # 在转盘上夹取物料
-                data = self.DETECTCOLOR()
+            elif data[0] == 'c':          # 在转盘上夹取物料,发送c0 c1 c2
+                data = self.Detect_color(int(data[1]), 1)
                 if data is not None:
                     self.send_msg(data)
                 else:
                     self.send_msg((255,255,255,255))
             elif data[0] == 'c':        # 发送cR cG cB,在地上夹取物料
-                res = self.Detect_color(COLOR_dict_reverse[data[1]], 2)
+                res = self.Detect_color(int(data[1]), 2)
                 if res[0]:
                     msg = 3, 1, res[1], res[2]
                     self.send_msg(msg)
@@ -305,24 +295,11 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                     msg = 3, 0, res[1], res[2]
                     self.send_msg(msg)     
             elif data[0] == 'C':        # 定位色环,发送CR CG CB
-                if data[1] == 'R':
-                    data = self.LOCATECOLOR(0)
-                    if data is not None:
-                        self.send_msg(data)
-                    else:
-                        self.send_msg((255,255,255,255))
-                elif data[1] == 'G':
-                    data = self.LOCATECOLOR(1)
-                    if data is not None:
-                        self.send_msg(data)
-                    else:
-                        self.send_msg((255,255,255,255))
-                elif data[1] == 'B':
-                    data = self.LOCATECOLOR(2)
-                    if data is not None:
-                        self.send_msg(data)
-                    else:
-                        self.send_msg((255,255,255,255))
+                data = self.LOCATECOLOR(COLOR_dict_reverse[str(data[1])])
+                if data is not None:
+                    self.send_msg(data)
+                else:
+                    self.send_msg((255,255,255,255))
 
 def circle_intersection_area(x0, y0, r0, x1, y1, r1):
     """计算两个圆的重叠面积"""
@@ -356,7 +333,7 @@ if __name__ == '__main__':
         s.img = s.img[:300, :]
 
         # 物料的识别
-        res:bool = s.Detect_color(0)
+        res, dx, dy = s.Detect_color(0, 1)
 
         # 色环的定位
         # res = s.LOCATECOLOR(0)
