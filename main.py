@@ -114,8 +114,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         self.ser = UART()
         self.cap = cv2.VideoCapture(0)
 
-        if ifdebug:
-            self.debug = True
+        self.debug = ifdebug
 
     def init_part1(self):
 
@@ -228,6 +227,8 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
 
     def SEND_TESTIMG(self):
         streaming = VideoStreaming('192.168.137.91', 8000)
+        streaming.connecting()
+        streaming.start()
         while True:
             if self.testimg is not None:
                 streaming.send(self.testimg)    # 发送图传
@@ -294,7 +295,7 @@ if __name__ == '__main__':
 
     # -------------功能测试代码-------------
     s = Solution()
-    streaming = VideoStreaming('192.168.137.103', 8000)
+    streaming = VideoStreaming('192.168.137.141', 8000)
 
     while True:
         s.img = s.cap.read()[1]
