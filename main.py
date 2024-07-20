@@ -158,7 +158,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         # 用于测试过程中发送图传的图片
         self.testimg = None
 
-    def send_msg(self, msg:str|int|list[int]|tuple[int]):
+    def send_msg(self, msg:str|int|list|tuple):
         """从串口发送信号"""
         if isinstance(msg, list) or isinstance(msg, tuple):
             self.ser.send_arr(msg)
@@ -187,12 +187,12 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         if self.debug:
             self.testimg = img
         if len(p) == 1:
-            if circle_intersection_area(p[0][0][0], p[0][0][1], p[0][1], 
+            if circle_intersection_area(p[0][0][0], p[0][0][1], p[0][1],        # type: ignore
                                     CIRCLE_POINT[0], CIRCLE_POINT[1], CIRCLE_R)/math.pi*CIRCLE_R1**2 > 0.8:      # 判断物料是否在夹爪内
                 return True, 0, 0
             else:
-                dx:int = p[0][0][0] - CIRCLE_POINT[0]
-                dy:int = p[0][0][1] - CIRCLE_POINT[1]
+                dx:int = p[0][0][0] - CIRCLE_POINT[0]               # type: ignore
+                dy:int = p[0][0][1] - CIRCLE_POINT[1]               # type: ignore
                 return False, dx, dy
             
         return False, None, None
@@ -286,6 +286,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 else:
                     self.send_msg((255,255,255,255))
             elif data in ['cR', 'cG', 'cB']:        # 发送cR cG cB,在地上夹取物料
+                # XXX: pylancye为什么报错
                 res = self.Detect_color(int(COLOR_dict[data[1]]), 2)
                 if res[0]:
                     msg = 3, 1, res[1], res[2]
