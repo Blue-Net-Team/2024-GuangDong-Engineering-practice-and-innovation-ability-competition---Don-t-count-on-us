@@ -138,10 +138,10 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
 
         self.debug = ifdebug
 
+        img_test_process = multiprocessing.Process(target=self.SEND_TESTIMG)
         if self.debug:
-            self.streaming = VideoStreaming('192.168.137.141', 8000)
-            self.streaming.connecting()
-            self.streaming.start()
+            img_test_process.start()
+
     def init_part1(self):
 
         # 创建识别器对象
@@ -189,8 +189,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 continue
             img, p = self.draw_cycle(mask)
             if self.debug:
-                self.testimg = img
-                self.streaming.send(self.testimg)    # 发送图传
+                cv2.imwrite('testimg.jpg', img)
             print(p)
             if len(p) == 1:
                 # 物料圆区域与夹爪圆区域的重叠面积占比
@@ -233,6 +232,9 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             img1 = cv2.bitwise_and(img1, img1, mask=mask)        # 与操作
             mask1, p_list = self.get_circle(img1)        # 画出圆形的图像
 
+            if self.debug:
+                cv2.imwrite('testimg.jpg', mask1)
+
             if p_list.shape == (1,3):
                 # print(p_list)
                 ps.append((p_list[0][0], p_list[0][1]))
@@ -256,14 +258,17 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             return False, dx, dy
         
     def SEND_TESTIMG(self):
+        self.streaming = VideoStreaming('192.168.137.141', 8000)
+        self.streaming.connecting()
+        self.streaming.start()
         while True:
-            if self.testimg is not None:
-                self.streaming.send(self.testimg)    # 发送图传
+            try:
+                self.testimg = cv2.imread('testimg.jpg')
+            except FileNotFoundError:
+                continue
+            self.streaming.send(self.testimg)    # 发送图传
 
     def __call__(self):
-        img_test_process = multiprocessing.Process(target=self.SEND_TESTIMG)
-        if self.debug:
-            img_test_process.start()
         while True:
             data = self.ser.read()
             if not data: 
