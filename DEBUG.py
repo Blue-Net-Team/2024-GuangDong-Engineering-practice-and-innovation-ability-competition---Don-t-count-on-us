@@ -67,8 +67,14 @@ class DEBUG(main.Solution):
         ====
         针对色环定位的鼠标事件回调函数"""
         if event == cv2.EVENT_LBUTTONDOWN:
-            self.circle_point = (x, y)
-            print(f'circle_point:{self.circle_point}')
+            if self.circle_id == 0:
+                self.circle_point1 = (x, y)
+                print(f'circle_point1:{self.circle_point1}')
+            elif self.circle_id == 1:
+                self.circle_point2 = (x, y)
+                print(f'circle_point2:{self.circle_point2}')
+            else:
+                raise ValueError('circle_id error')
 
     def mouse_action_Line(self, event, x, y, flags, param):
         """鼠标事件回调函数
@@ -265,7 +271,7 @@ class DEBUG(main.Solution):
         while True:
             _, self.img = self.reveiver.read()
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
-            self.img = self.img[:300, :]
+            self.img = self.img[:400, :]
             # self.img = cv2.GaussianBlur(self.img, (5, 5), 10)
 
             # 画出色环应该在的位置和大小
