@@ -56,8 +56,6 @@ class UART(serial.Serial):
                 msg = '-' + msg
                     
             self.write_with_no_pack(msg)
-            if index != len(args) - 1:
-                self.write_with_no_pack(',')
 
     @send_pack_str
     def send(self, data:int):
