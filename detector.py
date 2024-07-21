@@ -46,7 +46,7 @@ class ColorDetector(object):
         cv2.createTrackbar('low_v', f'Color and circle trackbar{_id}', self.low_v, 255, self.call_back_low_v)
         cv2.createTrackbar('high_v', f'Color and circle trackbar{_id}', self.high_v, 255, self.call_back_high_v)
         cv2.createTrackbar('minR', f'Color and circle trackbar{_id}', self.minR, 100, self.call_back_minarea)
-        cv2.createTrackbar('maxR', f'Color and circle trackbar{_id}', self.maxR, 100, self.call_back_maxarea)
+        cv2.createTrackbar('maxR', f'Color and circle trackbar{_id}', self.maxR, 150, self.call_back_maxarea)
         # endregion
         pass
 
