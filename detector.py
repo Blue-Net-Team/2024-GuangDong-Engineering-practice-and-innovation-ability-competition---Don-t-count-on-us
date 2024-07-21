@@ -118,7 +118,7 @@ class ColorDetector(object):
             lst.append((x, y, x + w, y + h))
         return img, lst
     
-    def draw_cycle(self, img:cv2.typing.MatLike) -> tuple[cv2.typing.MatLike, list[tuple[int, int]]]:
+    def draw_cycle(self, img:cv2.typing.MatLike) -> tuple[cv2.typing.MatLike, list[tuple[tuple[int, int], int]]]:
         """在图像上绘制圆形
         * img: 传入的二值化图像数据
         * 返回值：绘制圆形后的图像数据，圆形的坐标(圆心，半径),如果没有识别到圆形，图像不会绘制圆形，并且返回空列表"""

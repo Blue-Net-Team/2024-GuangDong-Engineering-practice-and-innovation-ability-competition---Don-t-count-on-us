@@ -1,5 +1,6 @@
 """在本地电脑运行"""
 import json
+import math
 import cv2
 from img_trans import ReceiveImg
 import main
@@ -43,18 +44,15 @@ class DEBUG(main.Solution):
 
         if iftrans:
             # 图传
-            # TODO: 修改IP地址
             self.reveiver = ReceiveImg('192.168.137.141', 8000)
         else:
             self.reveiver = cv2.VideoCapture(capid)
 
         self.set_threshold(thresholds[self.color])
 
-        #TODO:此处开闭运算不应该包含色环部分
         self.color_open = main.COLOR_OPEN
         self.color_close = main.COLOR_COLSE
         
-        # TODO:此处开闭运算要将整个色环包
         self.circle_open = main.CIRCLE_OPEN
         self.circle_close = main.CIRCLE_CLOSE
 
@@ -193,7 +191,7 @@ class DEBUG(main.Solution):
         # --------色环最小圆半径和最大圆半径的调试trackbar--------
         main.detector.CircleDetector.createTrackbar(self)
         cv2.createTrackbar('open', 'Circle trackbar0', self.circle_open, 5, self.callback_circle_open)        # 开运算trackbar
-        cv2.createTrackbar('close', 'Circle trackbar0', self.circle_close, 5, self.callback_circle_close)      # 闭运算trackbar
+        cv2.createTrackbar('close', 'Circle trackbar0', self.circle_close, 15, self.callback_circle_close)      # 闭运算trackbar
 
     def __createTrackbar_line(self):
         """
@@ -218,7 +216,7 @@ class DEBUG(main.Solution):
             ps = []             # points
             _, self.img = self.reveiver.read()
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
-            self.img = self.img[:300, :]
+            self.img = self.img[130:370, :]
 
             # 画出色环应该在的位置和大小
             img1 = self.img.copy()
@@ -232,7 +230,6 @@ class DEBUG(main.Solution):
             # self.img:原始图像
             # img1:对img深拷贝然后再画圈的图像
             try:
-                # cv2.circle(img1, p_list[0][0], p_list[0][1], (255,0,255), 2)        # type:ignore
                 for i in p_list:
                     cv2.circle(img2, i[0], i[1], (255,0,255), 2)
             except:
@@ -271,7 +268,7 @@ class DEBUG(main.Solution):
         while True:
             _, self.img = self.reveiver.read()
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
-            self.img = self.img[:400, :]
+            self.img = self.img[130:370, :]
             # self.img = cv2.GaussianBlur(self.img, (5, 5), 10)
 
             # 画出色环应该在的位置和大小
@@ -295,6 +292,10 @@ class DEBUG(main.Solution):
             print(p_list)
             if len(p_list) == 1:
                 cv2.circle(img2, p_list[0][0], p_list[0][1], (255, 0, 255), 2)
+
+                if main.circle_intersection_area(p_list[0][0][0], p_list[0][0][1], p_list[0][1],        # type: ignore
+                                            self.circle_point1[0], self.circle_point1[1], self.r1)/(math.pi*self.r1**2) > 0.8:      # 判断物料是否在夹爪内
+                        print(True)
 
             cv2.imshow('img', img2)
             cv2.imshow('mask', mask)
@@ -337,7 +338,7 @@ if __name__ == '__main__':
     # region 阈值调试
     # debug.SetCircleThresholds()
     # debug.SetLineThresholds()
-    debug.SetColorThresholds()
-    # debug.ReadOriImg()
+    # debug.SetColorThresholds()
+    debug.ReadOriImg()
     # endregion
 
