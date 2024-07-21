@@ -25,6 +25,7 @@ r"""
 import json
 import math
 import multiprocessing
+import time
 from UART import UART
 import detector
 import cv2
@@ -137,6 +138,10 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
 
         self.debug = ifdebug
 
+        if self.debug:
+            self.streaming = VideoStreaming('192.168.137.141', 8000)
+            self.streaming.connecting()
+            self.streaming.start()
     def init_part1(self):
 
         # 创建识别器对象
@@ -164,6 +169,10 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         else:
             self.ser.write(str(msg))
 
+        while self.ser.in_waiting > 0:
+            time.sleep(0.1)
+            self.ser.ori_read(self.ser.in_waiting)
+
 
     def Detect_color(self, _colorindex:int):
         """颜色识别
@@ -180,9 +189,11 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             img, p = self.draw_cycle(mask)
             if self.debug:
                 self.testimg = img
+                self.streaming.send(self.testimg)    # 发送图传
             if len(p) == 1:
-                if circle_intersection_area(p[0][0][0], p[0][0][1], p[0][1],        # type: ignore
-                                        CIRCLE_POINT1[0], CIRCLE_POINT1[1], CIRCLE_R1)/math.pi*CIRCLE_R1**2 > 0.8:      # 判断物料是否在夹爪内
+                Present = circle_intersection_area(p[0][0][0], p[0][0][1], p[0][1], CIRCLE_POINT1[0], CIRCLE_POINT1[1], CIRCLE_R1)/(math.pi*CIRCLE_R1**2)
+                print(Present)
+                if Present > 0.5:      # 判断物料是否在夹爪内
                     return True
 
             continue
@@ -240,23 +251,22 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             return dx, dy
         
     def SEND_TESTIMG(self):
-        streaming = VideoStreaming('192.168.137.141', 8000)
-        streaming.connecting()
-        streaming.start()
         while True:
             if self.testimg is not None:
-                streaming.send(self.testimg)    # 发送图传
+                self.streaming.send(self.testimg)    # 发送图传
 
     def __call__(self):
         img_test_process = multiprocessing.Process(target=self.SEND_TESTIMG)
         img_test_process.start()
         while True:
             data = self.ser.read()
-            if not data: continue
+            if not data: 
+                continue
             print(f'收到信号 {data}')
             self.img = self.cap.read()[1]
-            if self.img is None:continue
-            self.img = self.img[:400, :]
+            if self.img is None:
+                continue
+            self.img = self.img[130:370, :]
 
             if data == 'A':        # 校准角度
                 data = self.CORRECTION_angle()
@@ -281,6 +291,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             elif data[0] == 'C':        # 定位色环,发送CR CG CB
                 data = self.LOCATECOLOR(COLOR_dict_reverse[str(data[1])])
                 if data is not None:
+                    print(data)
                     self.send_msg(data)
                 else:
                     self.send_msg((255,255,255,255))
