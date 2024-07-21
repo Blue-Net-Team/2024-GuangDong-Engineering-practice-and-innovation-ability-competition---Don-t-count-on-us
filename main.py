@@ -74,8 +74,8 @@ CIRCLE_R2 = 50
 try:
     with open('circle2.json', 'r') as f:
         data = json.load(f)
-        CIRCLE_POINT2 = tuple(data['point'])
-        CIRCLE_R2 = data['r']
+        CIRCLE_POINT2:tuple[int, int] = tuple(data['point'])
+        CIRCLE_R2:int = data['r']
 except FileNotFoundError:
     pass
 
@@ -169,6 +169,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         else:
             self.ser.write(str(msg))
 
+        # 清除串口缓存
         while self.ser.in_waiting > 0:
             time.sleep(0.1)
             self.ser.ori_read(self.ser.in_waiting)
@@ -177,7 +178,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
     def Detect_color(self, _colorindex:int):
         """颜色识别
         * _colorindex: 颜色索引，0红 1绿 2蓝
-        * return: 是否识别到颜色(bool), dx, dy"""
+        * return: 是否识别到颜色(bool)"""
         self.set_threshold(thresholds[_colorindex])       # 设置阈值
         
         while True:
@@ -190,34 +191,35 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             if self.debug:
                 self.testimg = img
                 self.streaming.send(self.testimg)    # 发送图传
+            print(p)
             if len(p) == 1:
+                # 物料圆区域与夹爪圆区域的重叠面积占比
                 Present = circle_intersection_area(p[0][0][0], p[0][0][1], p[0][1], CIRCLE_POINT1[0], CIRCLE_POINT1[1], CIRCLE_R1)/(math.pi*CIRCLE_R1**2)
                 print(Present)
-                if Present > 0.5:      # 判断物料是否在夹爪内
+                # TODO:需要调试此处Present最小值,保证物料夹取的鲁棒性
+                if Present > 0.4:      # 判断物料是否在夹爪内
                     return True
 
             continue
     
-    def CORRECTION_angle(self) -> int|None:
+    def CORRECTION_angle(self) -> tuple[bool, int|None]:
         """校准小车与直线的角度
         * return: 识别到的角度,如果没有识别到直线返回None"""
         _, angle = self.get_angle(self.img)
         if angle is not None:
             angle = int(angle)
             if abs(angle-90) > 0:
-                return angle
-
-    def CORRECTION_distance(self) -> int|None:
-        """校准小车与直线的距离"""
-        distance = self.get_distance(self.img, Y0)
-        if distance is not None:
-            return int(distance)
+                return False, angle
+            else:
+                return True, 0
+        return False, None
 
     def LOCATECOLOR(self, _colorindex:int):
         """
         色环定位
         ----
         * _colorindex: 颜色索引
+        * return: 是否定位到色环(bool), x偏移量, y偏移量
         """
         num = 0
         while True:
@@ -225,7 +227,8 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             ps = []
             self.set_threshold(thresholds[_colorindex])       # 设置阈值
             mask = self.filter(self.img, CIRCLE_CLOSE, CIRCLE_OPEN)
-            if mask is None:return None
+            if mask is None:
+                continue
             img1 = self.img.copy()
             img1 = cv2.bitwise_and(img1, img1, mask=mask)        # 与操作
             mask1, p_list = self.get_circle(img1)        # 画出圆形的图像
@@ -246,9 +249,11 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 continue
             
             if p_average == [0, 0]:
-                return None
+                continue
             dx, dy = p_average[0] - CIRCLE_POINT2[0], p_average[1] - CIRCLE_POINT2[1]
-            return dx, dy
+            if abs(dx) <= 1 and abs(dy) <= 1:
+                return True, 1, 1
+            return False, dx, dy
         
     def SEND_TESTIMG(self):
         while True:
@@ -271,16 +276,14 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
 
             if data == 'A':        # 校准角度
                 data = self.CORRECTION_angle()
-                if data is not None:
-                    self.send_msg(data)
+                # XXX:此处角度为1的时候会与完成信号混淆,需要进一步沟通
+                if data[0]:
+                    self.send_msg(1)
                 else:
-                    self.send_msg((255,255,255,255))
-            elif data == 'D':       # 校准距离
-                data = self.CORRECTION_distance()
-                if data is not None:
-                    self.send_msg(data)
-                else:
-                    self.send_msg((255,255,255,255))
+                    if data[1] is not None:
+                        self.send_msg(data[1])
+                    else:
+                        self.send_msg(0)
             elif data in ['c0', 'c1', 'c2']:          # 在转盘上夹取物料,发送c0 c1 c2
                 data = self.Detect_color(int(data[1]))
                 if data:
@@ -291,11 +294,12 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                     print('send 0')
             elif data[0] == 'C':        # 定位色环,发送CR CG CB
                 data = self.LOCATECOLOR(COLOR_dict_reverse[str(data[1])])
-                if data is not None:
-                    print(data)
-                    self.send_msg(data)
+                if data[0]:
+                    self.send_msg(1)
+                    print(f'sended {1}')
                 else:
-                    self.send_msg((255,255,255,255))
+                    self.send_msg((data[1], data[2]))
+                    print(f'sended{data[1], data[2]}')
 
 def circle_intersection_area(x0, y0, r0, x1, y1, r1):
     """计算两个圆的重叠面积"""
