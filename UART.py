@@ -44,7 +44,18 @@ class UART(serial.Serial):
     def send_arr(self, args:list[int]|tuple[int]):
         """发送数组,包含包头包尾数据"""
         for index, i in enumerate(args):
-            self.write_with_no_pack(str(i))
+            msg = str(abs(i))  # 取绝对值，因为符号会单独处理
+            if len(msg) < 2:
+                msg = '0' + msg
+            elif len(msg) > 2:
+                raise ValueError('数组元素不能大于两位数')
+
+            if i >= 0:
+                msg = '+' + msg
+            else:
+                msg = '-' + msg
+                    
+            self.write_with_no_pack(msg)
             if index != len(args) - 1:
                 self.write_with_no_pack(',')
 
@@ -87,6 +98,9 @@ class UART(serial.Serial):
         else:
             res = data
         return res if res else None
+    
+    def ori_read(self, size:int):
+        return super().read(size)
     
     def __del__(self) -> None:
         return self.close()

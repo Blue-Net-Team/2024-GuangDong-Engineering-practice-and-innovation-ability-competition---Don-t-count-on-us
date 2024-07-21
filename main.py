@@ -257,7 +257,8 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
 
     def __call__(self):
         img_test_process = multiprocessing.Process(target=self.SEND_TESTIMG)
-        img_test_process.start()
+        if self.debug:
+            img_test_process.start()
         while True:
             data = self.ser.read()
             if not data: 
