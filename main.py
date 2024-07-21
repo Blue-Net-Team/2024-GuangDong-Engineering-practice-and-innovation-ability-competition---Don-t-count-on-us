@@ -25,7 +25,6 @@ r"""
 import json
 import math
 import multiprocessing
-from typing import Iterable
 from UART import UART
 import detector
 import cv2
@@ -166,36 +165,27 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             self.ser.write(str(msg))
 
 
-    def Detect_color(self, _colorindex:int, time:int):
+    def Detect_color(self, _colorindex:int):
         """颜色识别
         * _colorindex: 颜色索引，0红 1绿 2蓝
         * return: 是否识别到颜色(bool), dx, dy"""
-        if time == 1:
-            CIRCLE_POINT = CIRCLE_POINT1
-            CIRCLE_R = CIRCLE_R1
-        elif time == 2:
-            CIRCLE_POINT = CIRCLE_POINT2
-            CIRCLE_R = CIRCLE_R2
-        else:
-            raise ValueError('time参数错误')
-        
         self.set_threshold(thresholds[_colorindex])       # 设置阈值
-        if self.img is None:return False, None, None
-        mask = self.filter(self.img, COLOR_COLSE, COLOR_OPEN)                                 # 过滤
-        if mask is None:return False, None, None
-        img, p = self.draw_cycle(mask)
-        if self.debug:
-            self.testimg = img
-        if len(p) == 1:
-            if circle_intersection_area(p[0][0][0], p[0][0][1], p[0][1],        # type: ignore
-                                    CIRCLE_POINT[0], CIRCLE_POINT[1], CIRCLE_R)/math.pi*CIRCLE_R1**2 > 0.8:      # 判断物料是否在夹爪内
-                return True, 0, 0
-            else:
-                dx:int = p[0][0][0] - CIRCLE_POINT[0]               # type: ignore
-                dy:int = p[0][0][1] - CIRCLE_POINT[1]               # type: ignore
-                return False, dx, dy
-            
-        return False, None, None
+        
+        while True:
+            self.img = self.cap.read()[1]
+            mask = self.filter(self.img, COLOR_COLSE, COLOR_OPEN)                                 # 过滤
+            if mask is None:
+                print('read no img')
+                continue
+            img, p = self.draw_cycle(mask)
+            if self.debug:
+                self.testimg = img
+            if len(p) == 1:
+                if circle_intersection_area(p[0][0][0], p[0][0][1], p[0][1],        # type: ignore
+                                        CIRCLE_POINT1[0], CIRCLE_POINT1[1], CIRCLE_R1)/math.pi*CIRCLE_R1**2 > 0.8:      # 判断物料是否在夹爪内
+                    return True
+
+            continue
     
     def CORRECTION_angle(self) -> int|None:
         """校准小车与直线的角度
@@ -265,7 +255,8 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             if not data: continue
             print(f'收到信号 {data}')
             self.img = self.cap.read()[1]
-            self.img = self.img[:300, :]
+            if self.img is None:continue
+            self.img = self.img[:400, :]
 
             if data == 'A':        # 校准角度
                 data = self.CORRECTION_angle()
@@ -280,20 +271,13 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 else:
                     self.send_msg((255,255,255,255))
             elif data in ['c0', 'c1', 'c2']:          # 在转盘上夹取物料,发送c0 c1 c2
-                data = self.Detect_color(int(data[1]), 1)
-                if data[0]:
+                data = self.Detect_color(int(data[1]))
+                if data:
                     self.send_msg(1)
+                    print('send 1')
                 else:
                     self.send_msg(0)
-            elif data in ['cR', 'cG', 'cB']:        # 发送cR cG cB,在地上夹取物料
-                # XXX: pylancye为什么报错
-                res = self.Detect_color(int(COLOR_dict[data[1]]), 2)
-                if res[0]:
-                    msg = 3, 1, res[1], res[2]
-                    self.send_msg(msg)
-                else:
-                    msg = 3, 0, res[1], res[2]
-                    self.send_msg(msg)     
+                    print('send 0')
             elif data[0] == 'C':        # 定位色环,发送CR CG CB
                 data = self.LOCATECOLOR(COLOR_dict_reverse[str(data[1])])
                 if data is not None:
@@ -322,22 +306,22 @@ def circle_intersection_area(x0, y0, r0, x1, y1, r1):
 
 
 if __name__ == '__main__':
-    # Solution()()
+    Solution(True)()
 
     # -------------功能测试代码-------------
-    s = Solution()
-    streaming = VideoStreaming('192.168.137.141', 8000)
+    # s = Solution()
+    # streaming = VideoStreaming('192.168.137.141', 8000)
 
-    while True:
-        s.img = s.cap.read()[1]
-        s.img = s.img[:300, :]
+    # while True:
+    #     s.img = s.cap.read()[1]
+    #     s.img = s.img[:300, :]
 
-        # 物料的识别
-        res, dx, dy = s.Detect_color(0, 1)
+    #     # 物料的识别
+    #     res, dx, dy = s.Detect_color(0, 1)
 
-        # 色环的定位
-        # res = s.LOCATECOLOR(0)
+    #     # 色环的定位
+    #     # res = s.LOCATECOLOR(0)
 
-        streaming.send(s.testimg)    # 发送图传
+    #     streaming.send(s.testimg)    # 发送图传
 
-        print(res)
+    #     print(res)
