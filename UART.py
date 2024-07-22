@@ -45,10 +45,8 @@ class UART(serial.Serial):
         """发送数组,包含包头包尾数据"""
         for index, i in enumerate(args):
             msg = str(abs(i))  # 取绝对值，因为符号会单独处理
-            if len(msg) < 2:
+            while len(msg) < 3:
                 msg = '0' + msg
-            elif len(msg) > 2:
-                raise ValueError('数组元素不能大于两位数')
 
             if i >= 0:
                 msg = '+' + msg
