@@ -268,9 +268,19 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             if not data: 
                 continue
             print(f'收到信号 {data}')
-            self.img = self.cap.read()[1]
+            ret, self.img = self.cap.read()
             if self.img is None:
                 continue
+
+            if not ret:
+                if self.cap == cv2.VideoCapture(0):
+                    self.cap = cv2.VideoCapture(1)
+                    print('摄像头0失效')
+                else:
+                    self.cap = cv2.VideoCapture(0)
+                    print('摄像头1失效')
+                continue
+
             self.img = self.img[130:370, :]
 
             if data == 'A':        # 校准角度
