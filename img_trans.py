@@ -33,7 +33,7 @@ class VideoStreaming(object):
         print("Streaming...")
         self.stream = io.BytesIO()							# 创建一个io流，用于存放二进制数据
 
-    def send(self, _img) -> None:
+    def send(self, _img:cv2.typing.MatLike) -> bool:
         """发送图像数据
         ----
         * _img: 传入的图像数据"""
@@ -43,7 +43,7 @@ class VideoStreaming(object):
                 img_encode = cv2.imencode('.jpg', _img)[1]						# 编码
             except:
                 print('没有读取到图像')
-                return None
+                return False
             data_encode = np.array(img_encode)								    # 将编码数据转换成二进制数据
             self.stream.write(data_encode)										# 将二进制数据存放到io流
             self.connect.write(struct.pack('<L', self.stream.tell()))			# struct.pack()将数据转换成什么格式    stream.tell()获得目前指针的位置，将数据写入io流后，数据指针跟着后移，
@@ -56,9 +56,11 @@ class VideoStreaming(object):
             self.stream.truncate()												# 更新io流数据，删除指针后面的数据
 
             self.connect.write(struct.pack('<L', 0))						    # 发送0，相当于帧尾数据，单独收到这个数表示一帧图片传输结束
+            return True
         except ConnectionResetError:
             print('连接已重置')
             self.connecting()
+            return False
 
 
 class ReceiveImg(object):
