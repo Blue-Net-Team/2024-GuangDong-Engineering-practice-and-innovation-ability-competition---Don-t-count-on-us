@@ -40,7 +40,18 @@ class UART(serial.Serial):
             super().write(b'#')     # 包尾
         return wrapper
     
-    @send_pack_str
+    @staticmethod
+    def send_pack_arr(func):
+        r"""包头包尾修饰器
+        * 包头：@
+        * 包尾：#"""
+        def wrapper(self, *args, **kwargs):
+            super().write(b'Q')     # 包头
+            func(self, *args, **kwargs)
+            super().write(b'E')     # 包尾
+        return wrapper
+    
+    @send_pack_arr
     def send_arr(self, args:list[int]|tuple[int]):
         """发送数组,包含包头包尾数据"""
         for index, i in enumerate(args):
@@ -49,9 +60,9 @@ class UART(serial.Serial):
                 msg = '0' + msg
 
             if i >= 0:
-                msg = '+' + msg
+                msg = '1' + msg
             else:
-                msg = '-' + msg
+                msg = '0' + msg
                     
             self.write_with_no_pack(msg)
 
@@ -105,7 +116,7 @@ class UART(serial.Serial):
 if __name__ == '__main__':
     ser = UART()
     # ser.send(123)
-    # ser.send_arr([1, 2, 3, 4, 5])
-    ser.write('123')
+    ser.send_arr((-68, 27))
+    # ser.write('123')
     # print(ser.read())
     # del ser
