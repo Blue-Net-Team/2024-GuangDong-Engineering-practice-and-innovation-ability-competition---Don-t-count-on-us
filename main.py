@@ -137,6 +137,10 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         self.init_part1()
         self.ser = UART()
         self.cap = cv2.VideoCapture(0)
+        ret, test = self.cap.read()
+        if not ret:
+            self.cap = cv2.VideoCapture(1)
+            print('摄像头0失效')
 
         self.debug = ifdebug
 
@@ -199,7 +203,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 Present = circle_intersection_area(p[0][0][0], p[0][0][1], p[0][1], CIRCLE_POINT1[0], CIRCLE_POINT1[1], CIRCLE_R1)/(math.pi*CIRCLE_R1**2)
                 print(Present)
                 # TODO:需要调试此处Present最小值,保证物料夹取的鲁棒性
-                if Present > 0.4:      # 判断物料是否在夹爪内
+                if Present > 0.6:      # 判断物料是否在夹爪内
                     return True
 
             continue
