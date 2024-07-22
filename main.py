@@ -26,6 +26,8 @@ import json
 import math
 import multiprocessing
 import time
+
+import numpy as np
 from UART import UART
 import detector
 import cv2
@@ -134,13 +136,13 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
     def __init__(self, ifdebug:bool=False):
         self.init_part1()
         self.ser = UART()
-        self.cap = cv2.VideoCapture(1)
+        self.cap = cv2.VideoCapture(0)
 
         self.debug = ifdebug
 
-        img_test_process = multiprocessing.Process(target=self.SEND_TESTIMG)
-        if self.debug:
-            img_test_process.start()
+        self.streaming = VideoStreaming('192.168.137.141', 8000)
+        self.streaming.connecting()
+        self.streaming.start()
 
     def init_part1(self):
 
@@ -183,14 +185,14 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         
         while True:
             self.img = self.cap.read()[1]
+            self.img = self.img[130:370, :]
             mask = self.filter(self.img, COLOR_COLSE, COLOR_OPEN)                                 # 过滤
             if mask is None:
                 print('read no img')
                 continue
             img, p = self.draw_cycle(mask)
             if self.debug:
-                cv2.imwrite('testimg.jpg', img)
-            print(p)
+                self.streaming.send(img)
             if len(p) == 1:
                 print(p)
                 # 物料圆区域与夹爪圆区域的重叠面积占比
@@ -223,10 +225,11 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         """
         num = 0
         self.set_threshold(thresholds[_colorindex])       # 设置阈值
+        ps = []
         while True:
             p_average = [0, 0]
-            ps = []
             self.img = self.cap.read()[1]
+            self.img = self.img[130:370, :]
             mask = self.filter(self.img, CIRCLE_CLOSE, CIRCLE_OPEN)
             if mask is None:
                 continue
@@ -235,7 +238,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             mask1, p_list = self.get_circle(img1)        # 画出圆形的图像
 
             if self.debug:
-                cv2.imwrite('testimg.jpg', mask1)
+                self.streaming.send(mask1)
 
             if p_list.shape == (1,3):
                 # print(p_list)
@@ -258,17 +261,6 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             if abs(dx) <= 1 and abs(dy) <= 1:
                 return True, 1, 1
             return False, dx, dy
-        
-    def SEND_TESTIMG(self):
-        self.streaming = VideoStreaming('192.168.137.141', 8000)
-        self.streaming.connecting()
-        self.streaming.start()
-        while True:
-            try:
-                self.testimg = cv2.imread('testimg.jpg')
-            except FileNotFoundError:
-                continue
-            self.streaming.send(self.testimg)    # 发送图传
 
     def __call__(self):
         while True:
