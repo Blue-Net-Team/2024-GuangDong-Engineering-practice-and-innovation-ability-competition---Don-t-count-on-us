@@ -134,7 +134,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
     def __init__(self, ifdebug:bool=False):
         self.init_part1()
         self.ser = UART()
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(1)
 
         self.debug = ifdebug
 
@@ -192,6 +192,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 cv2.imwrite('testimg.jpg', img)
             print(p)
             if len(p) == 1:
+                print(p)
                 # 物料圆区域与夹爪圆区域的重叠面积占比
                 Present = circle_intersection_area(p[0][0][0], p[0][0][1], p[0][1], CIRCLE_POINT1[0], CIRCLE_POINT1[1], CIRCLE_R1)/(math.pi*CIRCLE_R1**2)
                 print(Present)
@@ -221,10 +222,11 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         * return: 是否定位到色环(bool), x偏移量, y偏移量
         """
         num = 0
+        self.set_threshold(thresholds[_colorindex])       # 设置阈值
         while True:
             p_average = [0, 0]
             ps = []
-            self.set_threshold(thresholds[_colorindex])       # 设置阈值
+            self.img = self.cap.read()[1]
             mask = self.filter(self.img, CIRCLE_CLOSE, CIRCLE_OPEN)
             if mask is None:
                 continue
@@ -298,7 +300,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                     self.send_msg(0)
                     print('send 0')
             elif data[0] == 'C':        # 定位色环,发送CR CG CB
-                data = self.LOCATECOLOR(COLOR_dict_reverse[str(data[1])])
+                data = self.LOCATECOLOR(int(data[1]))
                 if data[0]:
                     self.send_msg(1)
                     print(f'sended {1}')
