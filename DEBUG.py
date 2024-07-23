@@ -297,7 +297,7 @@ class DEBUG(main.Solution):
                                                     self.circle_point1[0], self.circle_point1[1], self.r1)/(math.pi*self.r1**2)
                 print(res)
                 if res > 0.4:      # 判断物料是否在夹爪内
-                        print(True)
+                    print(True)
 
             cv2.imshow('img', img2)
             cv2.imshow('mask', mask)
