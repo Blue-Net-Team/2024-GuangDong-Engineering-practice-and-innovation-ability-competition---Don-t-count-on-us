@@ -293,8 +293,10 @@ class DEBUG(main.Solution):
             if len(p_list) == 1:
                 cv2.circle(img2, p_list[0][0], p_list[0][1], (255, 0, 255), 2)
 
-                if main.circle_intersection_area(p_list[0][0][0], p_list[0][0][1], p_list[0][1],        # type: ignore
-                                            self.circle_point1[0], self.circle_point1[1], self.r1)/(math.pi*self.r1**2) > 0.8:      # 判断物料是否在夹爪内
+                res = main.circle_intersection_area(p_list[0][0][0], p_list[0][0][1], p_list[0][1],
+                                                    self.circle_point1[0], self.circle_point1[1], self.r1)/(math.pi*self.r1**2)
+                print(res)
+                if res > 0.4:      # 判断物料是否在夹爪内
                         print(True)
 
             cv2.imshow('img', img2)
