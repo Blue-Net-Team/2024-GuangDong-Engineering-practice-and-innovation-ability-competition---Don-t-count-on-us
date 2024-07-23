@@ -317,6 +317,8 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 else:
                     self.send_msg((data[1], data[2]))
                     print(f'sended{data[1], data[2]}')
+            else:
+                print(f'非法信号{data}')
 
 def circle_intersection_area(x0, y0, r0, x1, y1, r1):
     """计算两个圆的重叠面积"""
