@@ -211,9 +211,9 @@ class DEBUG(main.Solution):
         cv2.namedWindow('img', cv2.WINDOW_AUTOSIZE)
         cv2.setMouseCallback('img', self.mouse_action_circlePoint)    # 设置鼠标事件回调函数
         num = 0
+        ps = []             # points
         while True:
             p_average = [0, 0]
-            ps = []             # points
             _, self.img = self.reveiver.read()
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
             self.img = self.img[130:370, :]
