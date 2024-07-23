@@ -137,8 +137,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         self.init_part1()
         self.ser = UART()
         self.cap = cv2.VideoCapture(0)
-        ret, test = self.cap.read()
-        if not ret:
+        if not self.cap.isOpened():
             self.cap = cv2.VideoCapture(1)
             print('摄像头0失效')
 
@@ -305,7 +304,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 else:
                     self.send_msg(0)
                     print('send 0')
-            elif data[0] == 'C':        # 定位色环,发送CR CG CB
+            elif data in ['C0', 'C1', 'C2']:        # 定位色环,发送C0 C1 C2
                 data = self.LOCATECOLOR(int(data[1]))
                 if data[0]:
                     self.send_msg(1)
