@@ -52,7 +52,7 @@ class UART(serial.Serial):
         return wrapper
     
     @send_pack_arr
-    def send_arr(self, args:list[int, ...]|tuple[int, ...]):
+    def send_arr(self, args:list[int]|tuple[int, ...]):
         """发送数组,包含包头包尾数据"""
         for index, i in enumerate(args):
             msg = str(abs(i))  # 取绝对值，因为符号会单独处理
