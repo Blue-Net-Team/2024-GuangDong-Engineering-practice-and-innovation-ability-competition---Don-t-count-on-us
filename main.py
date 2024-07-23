@@ -167,8 +167,29 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         # 用于测试过程中发送图传的图片
         self.testimg = None
 
-    def send_msg(self, msg:str|int|list|tuple):
-        """从串口发送信号"""
+    def read_cap(self) -> cv2.typing.MatLike:
+        """
+        读取摄像头，并且判断摄像头是否正常，如果不正常则切换摄像头
+        * return: 读取到的图像
+        """
+        while True:
+            ret, img = self.cap.read()
+            if not ret:
+                if self.cap == cv2.VideoCapture(0):
+                    self.cap = cv2.VideoCapture(1)
+                    print('摄像头0失效')
+                else:
+                    self.cap = cv2.VideoCapture(0)
+                    print('摄像头1失效')
+                continue
+            return img
+        
+    def send_msg(self, msg:str|int|list[int]|tuple[int, ...]):
+        """从串口发送信号
+        ----
+        * 发送非迭代数据都会强转成字符串发送
+        * 发送两个元素的可迭代数据，会将其补全成三位数，并且包含0 1的前置正负号标志位发送
+        * msg: 发送的数据"""
         if isinstance(msg, list) or isinstance(msg, tuple):
             self.ser.send_arr(msg)
         else:
@@ -187,7 +208,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         self.set_threshold(thresholds[_colorindex])       # 设置阈值
         
         while True:
-            self.img = self.cap.read()[1]
+            self.img = self.read_cap()
             self.img = self.img[130:370, :]
             mask = self.filter(self.img, COLOR_COLSE, COLOR_OPEN)                                 # 过滤
             if mask is None:
@@ -207,17 +228,20 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
 
             continue
     
-    def CORRECTION_angle(self) -> tuple[bool, int|None]:
+    def CORRECTION_angle(self) -> tuple[bool, int]:
         """校准小车与直线的角度
         * return: 识别到的角度,如果没有识别到直线返回None"""
-        _, angle = self.get_angle(self.img)
-        if angle is not None:
-            angle = int(angle)
-            if abs(angle-90) > 0:
-                return False, angle
-            else:
-                return True, 0
-        return False, None
+        while True:
+            self.img = self.read_cap()
+            self.img = self.img[130:370, :]
+            _, angle = self.get_angle(self.img)
+            if angle is not None:
+                angle = int(angle)
+                if abs(angle-90) > 0:
+                    return False, angle
+                else:
+                    return True, 0
+            continue
 
     def LOCATECOLOR(self, _colorindex:int):
         """
@@ -231,7 +255,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         ps = []
         while True:
             p_average = [0, 0]
-            self.img = self.cap.read()[1]
+            self.img = self.read_cap()
             self.img = self.img[130:370, :]
             mask = self.filter(self.img, CIRCLE_CLOSE, CIRCLE_OPEN)
             if mask is None:
@@ -264,27 +288,13 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             if abs(dx) <= 1 and abs(dy) <= 1:
                 return True, 1, 1
             return False, dx, dy
-
+        
     def __call__(self):
         while True:
             data = self.ser.read()
             if not data: 
                 continue
             print(f'收到信号 {data}')
-            ret, self.img = self.cap.read()
-            if self.img is None:
-                continue
-
-            if not ret:
-                if self.cap == cv2.VideoCapture(0):
-                    self.cap = cv2.VideoCapture(1)
-                    print('摄像头0失效')
-                else:
-                    self.cap = cv2.VideoCapture(0)
-                    print('摄像头1失效')
-                continue
-
-            self.img = self.img[130:370, :]
 
             if data == 'A':        # 校准角度
                 data = self.CORRECTION_angle()
@@ -292,18 +302,12 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 if data[0]:
                     self.send_msg(1)
                 else:
-                    if data[1] is not None:
-                        self.send_msg(data[1])
-                    else:
-                        self.send_msg(0)
+                    self.send_msg(data[1])
             elif data in ['c0', 'c1', 'c2']:          # 在转盘上夹取物料,发送c0 c1 c2
                 data = self.Detect_color(int(data[1]))
                 if data:
                     self.send_msg(1)
                     print('send 1')
-                else:
-                    self.send_msg(0)
-                    print('send 0')
             elif data in ['C0', 'C1', 'C2']:        # 定位色环,发送C0 C1 C2
                 data = self.LOCATECOLOR(int(data[1]))
                 if data[0]:
