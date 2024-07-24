@@ -243,7 +243,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             if self.debug:
                 self.streaming.send(img)        # type: ignore
             if angle is not None:
-                angle = int(angle)
+                angle = round(angle)
                 if abs(angle-90) > 0:
                     return False, angle
                 else:
