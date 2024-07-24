@@ -231,8 +231,12 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         * return: 识别到的角度,如果没有识别到直线返回None"""
         while True:
             self.img = self.read_cap()
-            self.img = self.img[130:370, :]
-            _, angle = self.get_angle(self.img)
+            self.img = self.img[130:360, :]
+            if self.img is None:
+                continue
+            img, angle = self.get_angle(self.img)
+            if self.debug:
+                self.streaming.send(img)
             if angle is not None:
                 angle = int(angle)
                 if abs(angle-90) > 0:
