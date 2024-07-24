@@ -59,6 +59,8 @@ class DEBUG(main.Solution):
         self.line_open = main.LINE_OPEN
         self.line_close = main.LINE_CLOSE
 
+        self.thre = 200
+
     # region 鼠标事件
     def mouse_action_circlePoint(self, event, x, y, flags, param):
         """鼠标事件回调函数
@@ -172,6 +174,9 @@ class DEBUG(main.Solution):
 
     def callback_line_close(self, x):
         self.line_close = x
+
+    def callback_line_thre(self, x):
+        self.thre = x
     # endregion
 
     # region trackbar
@@ -200,6 +205,7 @@ class DEBUG(main.Solution):
         main.detector.LineDetector.createTrackbar(self)
         cv2.createTrackbar('open', 'Line trackbar0', self.line_open, 10, self.callback_line_open)        # 开运算trackbar
         cv2.createTrackbar('close', 'Line trackbar0', self.line_close, 10, self.callback_line_close)      # 闭运算trackbar
+        cv2.createTrackbar('thre', 'Line trackbar0', self.thre, 255, self.callback_line_thre)      # 二值化阈值trackbar
         cv2.createTrackbar('OK', 'Line trackbar0', 0, 1, self.callback_line_OK)
     # endregion
 
@@ -310,16 +316,17 @@ class DEBUG(main.Solution):
         """设置直线识别相关阈值"""
         self.ypath='y.json'         # type:str
         self.__createTrackbar_line()        # 呼出trackbar
-        cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('img', cv2.WINDOW_AUTOSIZE)
         cv2.setMouseCallback('img', self.mouse_action_Line)    # 设置鼠标事件回调函数
         while True:
             _, self.img = self.reveiver.read()
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
+            self.img = self.img[130:360, :]
             img1 = self.img.copy()
-            img1, angle = self.get_angle(self.img, True, self.line_close, self.line_open)
-            distance = self.get_distance(self.img, self.y, True)
+            img1, angle = self.get_angle(self.img, True, self.line_close, self.line_open, 0.5, self.thre)
+            # distance = self.get_distance(self.img, self.y, True)
 
-            print(f'angle:{angle}, distance:{distance}')
+            print(f'angle:{angle}')
             cv2.imshow('img', img1)             # type:ignore
 
             if cv2.waitKey(1) == 27:        # 按下ESC键退出
@@ -339,8 +346,8 @@ if __name__ == '__main__':
     debug = DEBUG(True)
     # region 阈值调试
     # debug.SetCircleThresholds()
-    # debug.SetLineThresholds()
+    debug.SetLineThresholds()
     # debug.SetColorThresholds()
-    debug.ReadOriImg()
+    # debug.ReadOriImg()
     # endregion
 
