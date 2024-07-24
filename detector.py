@@ -211,7 +211,7 @@ class LineDetector(object):
                 angle = np.arctan(slope) * 180 / np.pi
                 # 将识别的线画出来
                 cv2.line(_img1, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                return _img1, int(angle)
+                return _img1, angle
 
         return _img1, None
         
