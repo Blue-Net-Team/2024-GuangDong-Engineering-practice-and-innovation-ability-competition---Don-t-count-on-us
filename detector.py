@@ -201,8 +201,16 @@ class LineDetector(object):
         lines = cv2.HoughLines(edges, rho, np.pi / 180, thre)
 
         if lines is not None:       # 如果检测到直线
-            for line in lines:
-                x1, y1, x2, y2 = line[0]
+            for rho, theta in lines[0]:
+                a = np.cos(theta)
+                b = np.sin(theta)
+                x0 = a * rho
+                y0 = b * rho
+                x1 = int(x0 + 1000 * (-b))
+                y1 = int(y0 + 1000 * (a))
+                x2 = int(x0 - 1000 * (-b))
+                y2 = int(y0 - 1000 * (a))
+
                 # 计算直线的斜率
                 if x2 - x1 == 0:  # 避免除以零的错误
                     continue
