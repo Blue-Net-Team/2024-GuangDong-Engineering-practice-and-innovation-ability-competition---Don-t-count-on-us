@@ -198,7 +198,7 @@ class LineDetector(object):
         edges = cv2.dilate(edges, (3, 3), iterations=3)        # type:ignore
         if ifdubug: cv2.imshow('edges', edges)
         # 使用霍夫变换检测直线
-        lines = cv2.HoughLinesP(edges, rho, np.pi / 180, thre)
+        lines = cv2.HoughLines(edges, rho, np.pi / 180, thre)
 
         if lines is not None:       # 如果检测到直线
             for line in lines:
