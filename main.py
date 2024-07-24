@@ -143,9 +143,10 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
 
         self.debug = ifdebug
 
-        self.streaming = VideoStreaming('192.168.137.141', 8000)
-        self.streaming.connecting()
-        self.streaming.start()
+        if self.debug:
+            self.streaming = VideoStreaming('192.168.137.141', 8000)
+            self.streaming.connecting()
+            self.streaming.start()
 
     def init_part1(self):
 
@@ -175,12 +176,9 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         while True:
             ret, img = self.cap.read()
             if not ret:
-                if self.cap == cv2.VideoCapture(0):
-                    self.cap = cv2.VideoCapture(1)
-                    print('摄像头0失效')
-                else:
-                    self.cap = cv2.VideoCapture(0)
-                    print('摄像头1失效')
+                self.cap = cv2.VideoCapture(1)
+                print('摄像头0失效')
+
                 continue
             return img
         
@@ -223,7 +221,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 Present = circle_intersection_area(p[0][0][0], p[0][0][1], p[0][1], CIRCLE_POINT1[0], CIRCLE_POINT1[1], CIRCLE_R1)/(math.pi*CIRCLE_R1**2)
                 print(Present)
                 # TODO:需要调试此处Present最小值,保证物料夹取的鲁棒性
-                if Present > 0.6:      # 判断物料是否在夹爪内
+                if Present > 0.5:      # 判断物料是否在夹爪内
                     return True
 
             continue
@@ -341,22 +339,22 @@ def circle_intersection_area(x0, y0, r0, x1, y1, r1):
 
 
 if __name__ == '__main__':
-    Solution(True)()
+    Solution()()
 
     # -------------功能测试代码-------------
     # s = Solution()
-    # streaming = VideoStreaming('192.168.137.141', 8000)
+    # # streaming = VideoStreaming('192.168.137.141', 8000)
 
     # while True:
     #     s.img = s.cap.read()[1]
-    #     s.img = s.img[:300, :]
+    #     s.img = s.img[130:370, :]
 
     #     # 物料的识别
-    #     res, dx, dy = s.Detect_color(0, 1)
+    #     # res = s.Detect_color(2)
 
     #     # 色环的定位
-    #     # res = s.LOCATECOLOR(0)
+    #     res = s.LOCATECOLOR(1)
 
-    #     streaming.send(s.testimg)    # 发送图传
+    #     # streaming.send(s.testimg)    # 发送图传
 
     #     print(res)
