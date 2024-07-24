@@ -174,7 +174,13 @@ class LineDetector(object):
         self.maxval = x
     # endregion
 
-    def get_angle(self, _img0:cv2.typing.MatLike|None, ifdubug:bool=False, close:int=1, _open:int=1):
+    def get_angle(self, 
+                  _img0:cv2.typing.MatLike|None, 
+                  ifdubug:bool=False, 
+                  close:int=1, 
+                  _open:int=1,
+                  rho:int|float=1,
+                  thre:int=200):
         """获取直线的角度
         * img: 传入的图像数据
         * ifdubug: 是否调试"""
@@ -188,9 +194,11 @@ class LineDetector(object):
         edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (5, 5), iterations=close)        # type:ignore
         # 开运算
         edges = cv2.morphologyEx(edges, cv2.MORPH_OPEN, (5, 5), iterations=_open)        # type:ignore
+        # 膨胀
+        edges = cv2.dilate(edges, (3, 3), iterations=3)        # type:ignore
         if ifdubug: cv2.imshow('edges', edges)
         # 使用霍夫变换检测直线
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200)
+        lines = cv2.HoughLinesP(edges, rho, np.pi / 180, thre)
 
         if lines is not None:       # 如果检测到直线
             for line in lines:
@@ -206,31 +214,6 @@ class LineDetector(object):
                 return _img1, int(angle)
 
         return _img1, None
-    
-    def get_distance(self, img0:cv2.typing.MatLike|None, y0:int=0, ifdebug:bool=False, close:int=1, _open:int=1) -> int|None:
-        """获取直线的距离
-        * img: 传入的图像数据
-        * ypath: 基准点坐标保存的文件路径(json)
-        * ifdebug: 是否调试"""
-        if img0 is None:return None
-        img1 = img0.copy()
-        gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-        edges = cv2.Canny(gray, self.minval, self.maxval, apertureSize=3)
-        # 闭运算
-        edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, (3, 3), iterations=close)        # type:ignore
-        # 开运算
-        edges = cv2.morphologyEx(edges, cv2.MORPH_OPEN, (3, 3), iterations=_open)        # type:ignore
-        if ifdebug: cv2.imshow('edges', edges)
-        # 获取直线
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200)
-
-        if lines is not None:       # 如果检测到直线
-            for line in lines:
-                x1, y1, x2, y2 = line[0]
-                # 计算直线的长度
-                length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-                # 返回长度减去基准点的结果
-                return int(length - y0)
         
 
 class CircleDetector(object):
