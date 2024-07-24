@@ -239,7 +239,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             self.img = self.img[130:360, :]
             if self.img is None:
                 continue
-            img, angle = self.get_angle(self.img)
+            img, angle = self.get_angle(self.img, close=LINE_CLOSE, _open=LINE_OPEN)
             if self.debug:
                 self.streaming.send(img)        # type: ignore
             if angle is not None:
