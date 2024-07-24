@@ -43,12 +43,23 @@ class UART(serial.Serial):
     @staticmethod
     def send_pack_arr(func):
         r"""包头包尾修饰器
-        * 包头：@
-        * 包尾：#"""
+        * 包头：Q
+        * 包尾：E"""
         def wrapper(self, *args, **kwargs):
             super().write(b'Q')     # 包头
             func(self, *args, **kwargs)
             super().write(b'E')     # 包尾
+        return wrapper
+    
+    @staticmethod
+    def send_pack_Angle(func):
+        r"""包头包尾修饰器
+        * 包头：L
+        * 包尾：%"""
+        def wrapper(self, *args, **kwargs):
+            super().write(b'L')     # 包头
+            func(self, *args, **kwargs)
+            super().write(b'%')     # 包尾
         return wrapper
     
     @send_pack_arr
@@ -65,6 +76,20 @@ class UART(serial.Serial):
                 msg = '0' + msg
                     
             self.write_with_no_pack(msg)
+
+    @send_pack_Angle
+    def send_angle(self, args:int):
+        """发送数组,包含包头包尾数据"""
+        msg = str(abs(args))  # 取绝对值，因为符号会单独处理
+        while len(msg) < 2:
+            msg = '0' + msg
+
+        if args >= 0:
+            msg = '1' + msg
+        else:
+            msg = '0' + msg
+                
+        self.write_with_no_pack(msg)
 
     @send_pack_str
     def send(self, data:int):
