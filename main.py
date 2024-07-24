@@ -182,16 +182,21 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 continue
             return img
         
-    def send_msg(self, msg:str|int|list[int]|tuple[int, ...]):
+    def send_msg(self, msg:str|int|list[int]|tuple[int, ...], _A:bool=False):
         """从串口发送信号
         ----
         * 发送非迭代数据都会强转成字符串发送
         * 发送两个元素的可迭代数据，会将其补全成三位数，并且包含0 1的前置正负号标志位发送
-        * msg: 发送的数据"""
+        * msg: 发送的数据
+        * _A: 是否发送角度数据"""
         if isinstance(msg, list) or isinstance(msg, tuple):
             self.ser.send_arr(msg)
         else:
-            self.ser.write(str(msg))
+            if not _A:
+                self.ser.write(str(msg))
+            else:
+                # 发送角度数据 
+                self.ser.send_angle(msg)       # type: ignore 
 
         # 清除串口缓存
         while self.ser.in_waiting > 0:
@@ -236,7 +241,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 continue
             img, angle = self.get_angle(self.img)
             if self.debug:
-                self.streaming.send(img)
+                self.streaming.send(img)        # type: ignore
             if angle is not None:
                 angle = int(angle)
                 if abs(angle-90) > 0:
@@ -301,11 +306,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
 
             if data == 'A':        # 校准角度
                 data = self.CORRECTION_angle()
-                # XXX:此处角度为1的时候会与完成信号混淆,需要进一步沟通
-                if data[0]:
-                    self.send_msg(1)
-                else:
-                    self.send_msg(data[1])
+                self.send_msg(data[1], True)
             elif data in ['c0', 'c1', 'c2']:          # 在转盘上夹取物料,发送c0 c1 c2
                 data = self.Detect_color(int(data[1]))
                 if data:
