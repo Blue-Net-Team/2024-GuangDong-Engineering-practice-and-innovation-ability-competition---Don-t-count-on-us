@@ -243,6 +243,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             if self.debug:
                 self.streaming.send(img)        # type: ignore
             if angle is not None:
+                print(angle)
                 angle = round(angle)
                 if abs(angle-90) > 0:
                     return False, angle
@@ -293,9 +294,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 ps = []         # 重置
                 continue
             dx, dy = p_average[0] - CIRCLE_POINT2[0], p_average[1] - CIRCLE_POINT2[1]
-            if abs(dx) <= 2 and abs(dy) <= 2:
-                return True, 1, 1
-            return False, dx, dy
+            return dx, dy
         
     def __call__(self):
         while True:
@@ -307,6 +306,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
             if data == 'A':        # 校准角度
                 data = self.CORRECTION_angle()
                 self.send_msg(data[1], True)
+                print(f'sended {data[1]}')
             elif data in ['c0', 'c1', 'c2']:          # 在转盘上夹取物料,发送c0 c1 c2
                 data = self.Detect_color(int(data[1]))
                 if data:
@@ -314,12 +314,8 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                     print('send 1')
             elif data in ['C0', 'C1', 'C2']:        # 定位色环,发送C0 C1 C2
                 data = self.LOCATECOLOR(int(data[1]))
-                if data[0]:
-                    self.send_msg(1)
-                    print(f'sended {1}')
-                else:
-                    self.send_msg((data[1], data[2]))
-                    print(f'sended{data[1], data[2]}')
+                self.send_msg((data[0], data[1]))
+                print(f'sended{data[0], data[1]}')
             else:
                 print(f'非法信号{data}')
 
