@@ -31,11 +31,20 @@ import numpy as np
 from UART import UART
 import detector
 import cv2
+import RPi.GPIO as GPIO
 
 # --------------用于调试的库--------------
 from img_trans import VideoStreaming
 
+GPIO.setmode(GPIO.BCM)
+
 #region 参数加载
+PIN_LED = 24
+
+GPIO.setup(PIN_LED, GPIO.OUT)
+
+GPIO.output(PIN_LED, GPIO.HIGH)
+
 COLOR_dict = {
     0:'R',
     1:'G',
@@ -298,10 +307,13 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
         
     def __call__(self):
         while True:
+            GPIO.output(PIN_LED, GPIO.HIGH)
             data = self.ser.read()
             if not data: 
                 continue
             print(f'收到信号 {data}')
+
+            GPIO.output(PIN_LED, GPIO.LOW)
 
             if data == 'A':        # 校准角度
                 data = self.CORRECTION_angle()
