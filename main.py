@@ -293,7 +293,7 @@ class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDet
                 ps = []         # 重置
                 continue
             dx, dy = p_average[0] - CIRCLE_POINT2[0], p_average[1] - CIRCLE_POINT2[1]
-            if abs(dx) <= 1 and abs(dy) <= 1:
+            if abs(dx) <= 2 and abs(dy) <= 2:
                 return True, 1, 1
             return False, dx, dy
         
