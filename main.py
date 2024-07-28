@@ -31,20 +31,11 @@ import numpy as np
 from UART import UART
 import detector
 import cv2
-import RPi.GPIO as GPIO
 
 # --------------用于调试的库--------------
 from img_trans import VideoStreaming
 
-GPIO.setmode(GPIO.BCM)
-
 #region 参数加载
-PIN_LED = 24
-
-GPIO.setup(PIN_LED, GPIO.OUT)
-
-GPIO.output(PIN_LED, GPIO.HIGH)
-
 COLOR_dict = {
     0:'R',
     1:'G',
@@ -100,13 +91,6 @@ try:        # 直线canny算子的参数
 except FileNotFoundError:
     pass
 
-Y0 = 0
-try:        # 直线的基准y坐标
-    with open('y.json', 'r') as f:
-        data = json.load(f)
-        Y0 = data['y']
-except FileNotFoundError:
-    pass
 
 # 物料识别的开闭运算参数
 COLOR_COLSE = 0
@@ -352,22 +336,14 @@ def circle_intersection_area(x0, y0, r0, x1, y1, r1):
 
 
 if __name__ == '__main__':
+    import RPi.GPIO as GPIO
+    
+    PIN_LED = 24
+
+    GPIO.setmode(GPIO.BCM)
+
+    GPIO.setup(PIN_LED, GPIO.OUT)
+
+    GPIO.output(PIN_LED, GPIO.HIGH)
+
     Solution()()
-
-    # -------------功能测试代码-------------
-    # s = Solution()
-    # # streaming = VideoStreaming('192.168.137.141', 8000)
-
-    # while True:
-    #     s.img = s.cap.read()[1]
-    #     s.img = s.img[130:370, :]
-
-    #     # 物料的识别
-    #     # res = s.Detect_color(2)
-
-    #     # 色环的定位
-    #     res = s.LOCATECOLOR(1)
-
-    #     # streaming.send(s.testimg)    # 发送图传
-
-    #     print(res)
