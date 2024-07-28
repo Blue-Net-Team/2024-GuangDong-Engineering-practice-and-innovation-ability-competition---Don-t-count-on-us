@@ -23,8 +23,6 @@ class DEBUG(main.Solution):
         self.circle_point2 = main.CIRCLE_POINT2
         self.r2 = main.CIRCLE_R2
 
-        self.y = main.Y0
-
         self.maxval = main.MAXVAL
         self.minval = main.MINVAL
 
@@ -323,7 +321,7 @@ class DEBUG(main.Solution):
             if self.img is None:continue        # 如果没有读取到图像数据，继续循环
             self.img = self.img[130:360, :]
             img1 = self.img.copy()
-            img1, angle = self.get_angle(self.img, True, self.line_close, self.line_open, 0.5, self.thre)
+            img1, angle = self.get_angle(self.img, True, self.line_close, self.line_open, 1, self.thre)
             # distance = self.get_distance(self.img, self.y, True)
 
             print(f'angle:{angle}')
