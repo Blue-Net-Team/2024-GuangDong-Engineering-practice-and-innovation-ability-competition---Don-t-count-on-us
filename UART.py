@@ -67,6 +67,7 @@ class UART(serial.Serial):
         """发送数组,包含包头包尾数据"""
         for index, i in enumerate(args):
             msg = str(abs(i))  # 取绝对值，因为符号会单独处理
+            #  补零，使得长度为3
             while len(msg) < 3:
                 msg = '0' + msg
 
@@ -81,6 +82,7 @@ class UART(serial.Serial):
     def send_angle(self, args:int):
         """发送数组,包含包头包尾数据"""
         msg = str(abs(args))  # 取绝对值，因为符号会单独处理
+        # 补零，使得长度为2
         while len(msg) < 2:
             msg = '0' + msg
 

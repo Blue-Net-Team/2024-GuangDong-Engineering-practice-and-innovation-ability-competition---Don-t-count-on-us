@@ -127,6 +127,9 @@ except FileNotFoundError:
 
 class Solution(detector.ColorDetector, detector.LineDetector, detector.CircleDetector):     # type: ignore
     def __init__(self, ifdebug:bool=False):
+        """
+        * ifdebug: 是否开启远程调试，此功能可以将识别过程中的重要中间图像通过远程图传传回本地电脑
+        """
         self.init_part1()
         self.ser = UART()
         self.cap = cv2.VideoCapture(0)
